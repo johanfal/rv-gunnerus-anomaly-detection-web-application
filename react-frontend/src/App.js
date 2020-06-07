@@ -1,34 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
 import './App.css';
 
-function App() {
-  const [currentTime, setCurrentTime] = useState(0);
-
-  useEffect(() => {
-    fetch('/time').then(res => res.json()).then(data => {
-      setCurrentTime(data.time);
-    });
-  }, []);
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        <p>The current time is {currentTime}.</p>
-      </header>
+const App = () => (
+  <Router basename={process.env.PUBLIC_URL}>
+    <div style={{ display: 'flex', flexDirection: 'column','alignItems': 'center','justifyContent': 'center' }}>
+      <Route
+        exact
+        path="/"
+        render={() => (
+          <div>
+            <title>Upload</title>
+            <h2>Upload</h2>
+            <p>
+              Upload your Keras model:
+            </p>
+          </div>
+        )}
+      />
+      {/* <Route path="/upload" component={CubeExample} />
+      <Route path="/asteroids" component={GameExample} />
+      <Route path="/world-map" component={MapExample} /> */}
     </div>
-  );
-}
+  </Router>
+);
 
 export default App;
