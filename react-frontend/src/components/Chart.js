@@ -80,6 +80,10 @@ export class Chart extends React.Component {
 
         // this.socket.on('reading', this.storeReading);
 
+        this.socket.on('newnumber', (data) => {
+            console.log("received number: " + data.number)
+        })
+
         // Various Errors handling
         SOCKETIO_ERRORS.forEach(errType => {
             this.socket.on(errType, (error) => this.setError(errType, error));

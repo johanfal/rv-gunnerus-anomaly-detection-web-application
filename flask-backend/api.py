@@ -1,4 +1,6 @@
-import time
+import time, random
+
+from threading import Thread, Event
 from flask import Flask, render_template, request
 
 from flask_socketio import SocketIO, send, emit
@@ -11,7 +13,6 @@ app = Flask(__name__)
 
 # Add secret key
 app.secret_key = 'change this'
-
 
 # Configure PostgreSQL Heroku database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://lxwpcwfzestkpm:45f3f577' \
@@ -27,7 +28,25 @@ db = SQLAlchemy(app)
 # Initialize Flask-SocketIO
 socketio = SocketIO(app)
 
-INTERVAL = 1000 # update interval in [ms]
+INTERVAL = 1 # update interval in seconds
+
+thread = Thread()
+thread_stop_event = Event()
+
+class PushThread(Thread):
+    def __init__(self):
+        self.delay = INTERVAL
+        super(PushThread, self).__init__()
+
+    def get_data(self):
+        """Get data from the current index."""
+        while not thread_stop_event.isSet():
+            number = round(random.randint(1,101))
+            socketio.emit('newnumber', {'number': number})
+            time.sleep(self.delay)
+
+    def run(self):
+        self.get_data()
 
 # Handle connected signals
 socketio.connections = {}
@@ -63,10 +82,15 @@ def handle_test_message(message):
 
 @socketio.on('connect')
 def connect():
+    global thread
     print('\n\n\nConnected')
     print(f'New client connected with connection id: {request.sid}')
     # socketio.connections[request.sid] = {}
     sensor_id = request.args.get('sensor')
+    if not thread.isAlive():
+        print("Starting thread...")
+        thread = PushThread()
+        thread.start()
 
 
 @socketio.on('custom_test')
