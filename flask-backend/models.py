@@ -4,8 +4,8 @@ db = SQLAlchemy()
 
 class MainEngines(db.Model):
     """User model."""
-
     __tablename__ = "MainEngines"
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     time = db.Column(db.DateTime, unique=True, nullable=False)
     me1_backupbatt = db.Column(db.Float)
     me1_boostpress = db.Column(db.Float)
@@ -19,8 +19,9 @@ class MainEngines(db.Model):
     me1_power = db.Column(db.Float)
     me1_startbatt = db.Column(db.Float)
     me1_coolanttemp = db.Column(db.Float)
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-
+    def get_dict(self):
+        dct = {key:value for key, value in self.__dict__.items() if not key.startswith('__') and not callable(value) and not key.startswith('_')}
+        return dct
 
 
 class Users(db.Model):

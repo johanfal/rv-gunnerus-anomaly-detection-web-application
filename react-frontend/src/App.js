@@ -1,16 +1,14 @@
-import React, { useEffect } from 'react';
-import './App.css';
+import React from 'react';
+import './styles/main.scss';
+import Chart from './components/Chart';
 
 function App() {
-  useEffect(() => {
-    fetch("/get_values").then(response =>
-      response.json().then(data => {
-        console.log(data);
-        })
-    );
-  }, []);
-
-    return <div className="App" />;
+  return (
+  <div>
+    <h1>Anomaly Detection Dashboard</h1>
+    <Chart sensorId="1" />
+  </div>
+  )
 };
 
 export default App;
