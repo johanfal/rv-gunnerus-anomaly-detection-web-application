@@ -1,0 +1,8 @@
+{
+    "python.pythonPath": "venv\\Scripts\\python.exe",
+    "git.ignoreLimitWarning": true,
+    "workbench.colorCustomizations": {
+        "terminal.foreground": "#7beb8d",
+        "terminal.background": "#233d47",
+    "python.analysis.disabled": ["unresolved-import"]
+}

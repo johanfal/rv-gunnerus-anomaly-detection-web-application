@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import socketIOClient from 'socket.io-client';
+import io from 'socket.io-client';
 import D3TsChart from '../d3-helpers/d3-ts-chart';
 
 const MAX_POINTS_TO_STORE = 50;
@@ -50,7 +50,7 @@ export class Chart extends React.Component {
     }
 
     componentDidMount() {
-        console.log(this.props)
+        // At this point, this.props includes the input from the called component in "App.js"
         if (this.props['sensorId'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
         if (this.props['x-ticks'] > MAX_POINTS_TO_STORE) throw new Error(`You cannot display more than ${MAX_POINTS_TO_STORE} 'x-ticks'. `);
 
@@ -68,12 +68,17 @@ export class Chart extends React.Component {
 
             this.connect();
 
-            this.attachFocusWatcher();
+            // this.attachFocusWatcher();
     }
 
     connect = () => {
-        this.socket = socketIOClient(`/?sensor=${this.props.sensorId}`);
-        this.socket.on('reading', this.storeReading);
+        this.socket = io.connect(`/?sensor=${this.props.sensorId}`)
+        this.socket.on('connect', () => {
+            this.socket.emit("test_message", "I am connected!")
+        });
+        console.log('Below socket execution')
+
+        // this.socket.on('reading', this.storeReading);
 
         // Various Errors handling
         SOCKETIO_ERRORS.forEach(errType => {

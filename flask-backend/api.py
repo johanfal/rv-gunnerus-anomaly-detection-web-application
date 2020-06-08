@@ -1,9 +1,9 @@
 import time
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 from flask_socketio import SocketIO, send, emit
 
-
+from functions import *
 from models import *
 
 # Instantiate Flask application
@@ -29,6 +29,9 @@ socketio = SocketIO(app)
 
 INTERVAL = 1000 # update interval in [ms]
 
+# Handle connected signals
+socketio.connections = {}
+
 data = [
     {
         "readings": [1, 2, 1, 0, 1, 2, 1, 8, 9, 8, 1, 2, 0, 2, 1, 2, 3, 1, 2, 0, 8, 9, 2, 0, 3, 0, 2, 1, 2, 3, 8, 10, 2, 1, 2, 3, 0, 1, 2, 1, 2, 7, 6, 9, 1, 2, 0, 1, 2, 1],
@@ -48,33 +51,51 @@ data_s1 = data[0]
 data_s2 = data[1]
 data_s3 = data[2]
 
-connections = {}
 
 @app.route('/get_values', methods = ['GET', 'POST'])
-def get_time_step_values():
+def get_timestamp_values():
     values = MainEngines.query.get(1)
     return values.get_dict()
 
+@socketio.on('test_message')
+def handle_test_message(message):
+    print('received message: ' + message)
+
 @socketio.on('connect')
 def connect():
-    emit('event-connect', {'data': 'connected'})
+    print('\n\n\nConnected')
+    print(f'New client connected with connection id: {request.sid}')
+    # socketio.connections[request.sid] = {}
+    sensor_id = request.args.get('sensor')
+
+
+@socketio.on('custom_test')
+def custom_test(message):
+    print("\n\nThis is the id:")
+    emit('test', {'data': 'connected'})
+
+
+@app.route('/ping')
+def ping():
+    socketio.emit('ping event', {'data': 42})
+
     # connection_id = socket.id
     # sensor_id = socket['sensor']
     # print(f"New client connected with id {sensor_id}")
 
-@socketio.on('disconnect')
-def disconnect():
-    emit('event-disconnect', {'data': 'disconnected'})
-    # print(f'Client {data.id} disconnected')
+# @socketio.on('disconnect')
+# def disconnect():
+#     emit('event-disconnect', {'data': 'disconnected'})
+#     # print(f'Client {data.id} disconnected')
 
-@socketio.on('reading')
-def reading(data):
-    response = {
-        'timestamp': 0,
-        'value': 0,
-        'predicted': 0,
-    }
-    emit('reading', response)
+# @socketio.on('reading')
+# def reading(data):
+#     response = {
+#         'timestamp': 0,
+#         'value': 0,
+#         'predicted': 0,
+#     }
+#     emit('reading', response)
 
-if __name__ == '__main__':
-    socketio.run(app, debug=True)
+# if __name__ == '__main__':
+#     socketio.run(app, debug=True)
