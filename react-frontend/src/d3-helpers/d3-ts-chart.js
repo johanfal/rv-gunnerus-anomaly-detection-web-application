@@ -101,7 +101,8 @@ export default class D3TsChart {
     }
 
     setSeriesData(name, data, adjustAxes = true) {
-        if (!window.focused) return;
+        // if (!window.focused) return;
+        console.log(name, this.seriesDict)
         const series = this.seriesDict[name];
 
         this.adjustDimensions();

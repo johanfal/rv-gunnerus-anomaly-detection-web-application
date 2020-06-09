@@ -30,7 +30,7 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
 
-INTERVAL = 1 # update interval in seconds
+INTERVAL = 10 # update interval in seconds
 
 thread = Thread()
 thread_stop_event = Event()
@@ -44,13 +44,9 @@ class PushThread(Thread):
     def get_data(self):
         """Get data from the current index."""
         while not thread_stop_event.isSet():
-            number1 = random.randint(0,4)
-            if number1 < 1: number1 = 1
-            else: number1 = 0
-            number2 = random.randint(1,101)
-            print(f" ix: {self.index}, sensor: {self.id}, socket: {self.sid}")
-            # socketio.emit('get', {'new': self.index, 'sensor_id':self.id})
-            socketio.emit('reading', {'timestamp':time.time(), 'value':number2, 'anomaly':number1})
+            number = random.randint(1,101)
+            print(f" ix: {self.index}, generated: {number}, sensor: {self.id}, socket: {self.sid}")
+            socketio.emit('get', {'new': self.index, 'sensor_id':self.id})
             time.sleep(self.delay)
             self.index += 1
     def run(self):

@@ -7,8 +7,13 @@ function App() {
   return (
   <div>
     <h1>Anomaly Detection Dashboard</h1>
-    {/* <Chart sensorId="1" /> */}
-    <Test />
+    <Chart sensor_id="1" />
+    <Chart sensor_id="2" x-ticks="50" />
+    {/* <Chart sensor_id="3" />
+    <Chart sensor_id="4" /> */}
+
+    {/* <Chart sensor_id = "2" x-ticks="20" /> */}
+    {/* <Test /> */}
   </div>
   )
 };

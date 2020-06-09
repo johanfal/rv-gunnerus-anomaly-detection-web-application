@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {createRef, Component } from 'react';
 import ReactDOM from 'react-dom';
 
 import io from 'socket.io-client';
@@ -21,7 +21,7 @@ const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 
 *
 * 3. `componentWillUnmount()` disconects from socket.
 */
-export class Chart extends React.Component {
+export class Chart extends Component {
 
     seriesList = [
         {
@@ -33,13 +33,13 @@ export class Chart extends React.Component {
             labelClass: 'readings',
         },
         {
-            name: 'z-score',
+            name: 'anomaly',
             type: 'AREA',
             fill: 'rgba(216, 13, 49, 0.2)',
             stroke: 'transparent',
             strokeWidth: 0,
             label: 'Peaks',
-            labelClass: 'z-score',
+            labelClass: 'anomaly',
         }
     ]
     tsChart = new D3TsChart();
@@ -51,17 +51,19 @@ export class Chart extends React.Component {
         error: ''
     }
 
+    wrapper = createRef();
+
     componentDidMount() {
         // At this point, this.props includes the input from the called component in "App.js"
-        if (this.props['sensorId'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
+        if (this.props['sensor_id'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
         if (this.props['x-ticks'] > MAX_POINTS_TO_STORE) throw new Error(`You cannot display more than ${MAX_POINTS_TO_STORE} 'x-ticks'. `);
 
-        const parentRef = ReactDOM.findDOMNode(this);
+        const node = this.wrapper.current;
 
         this.tsChart.init({
-            elRef: parentRef.getElementsByClassName('chart-container')[0],
+            elRef: node.getElementsByClassName('chart-container')[0],
             classList: {
-                svg: 'z-chart'
+                svg: 'anomaly_chart'
             }
         });
 
@@ -73,18 +75,16 @@ export class Chart extends React.Component {
             this.attachFocusWatcher();
     }
 
+
     connect = () => {
-        this.socket = io.connect(`/?sensor=${this.props.sensorId}`)
-        this.socket.on('connect', () => {
-            this.socket.emit("test_message", "I am connected!")
-        });
-        console.log('Below socket execution')
 
+        this.socket = io.connect(`/?sensor=${this.props.sensor_id}`)
         // this.socket.on('reading', this.storeReading);
-
-        this.socket.on('newnumber', (data) => {
-            console.log("received number: " + data.number)
+        console.log('connected..')
+        this.socket.on('connect', () => {
+            console.log(this.socket.id)
         })
+        this.socket.on('reading', this.storeReading);
 
         // Various Errors handling
         SOCKETIO_ERRORS.forEach(errType => {
@@ -115,8 +115,8 @@ export class Chart extends React.Component {
     * - We need to cache more date than 20
     * - This should be useful when implementing variable `x-ticks` in UI
     */
-    storeReading = (response) => {
-        const reading = JSON.parse(response);
+    storeReading = (reading) => {
+        console.log(reading);
         this.setState((prevState) => {
             const data = prevState.data;
             const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
@@ -142,11 +142,11 @@ export class Chart extends React.Component {
         const xTicks = Math.max(this.state.data.length - (this.props['x-ticks'] || DEFAULT_X_TICKS), 0);
         const data = this.state.data.slice(xTicks);
         const highestValueInView = Math.max(...data.map(p => p.value));
-        const zLine = data.map(p => ({ timestamp: p.timestamp, value: p.zscore ? highestValueInView : 0 }));
+        const anomalyLine = data.map(p => ({ timestamp: p.timestamp, value: p.anomaly ? highestValueInView : 0 }));
 
         this.tsChart.adjustAxes(data);
         this.tsChart.setSeriesData('sensor-data', data, false);
-        this.tsChart.setSeriesData('z-score', zLine, false);
+        this.tsChart.setSeriesData('anomaly', anomalyLine, false);
     }
 
 
@@ -156,7 +156,7 @@ export class Chart extends React.Component {
     }
 
     render = () => (
-        <div className="card">
+        <div className="card" ref={this.wrapper}>
 
             <h2>{!this.state.lastTimestamp ? 'Connecting...' : `Sensor ${this.props.sensorId}`}</h2>
 
