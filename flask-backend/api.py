@@ -1,16 +1,17 @@
 import time, random
 
 from threading import Thread, Event
-from flask import Flask, render_template, request
-
+from flask import Flask, render_template, request, redirect, url_for
+import eventlet
 from flask_socketio import SocketIO, send, emit
+from sqlalchemy.orm import load_only
 
 from functions import *
 from models import *
 
 # Instantiate Flask application
 app = Flask(__name__)
-
+eventlet.monkey_patch()
 # Add secret key
 app.secret_key = 'change this'
 
@@ -27,6 +28,7 @@ db = SQLAlchemy(app)
 
 # Initialize Flask-SocketIO
 socketio = SocketIO(app)
+socketio.init_app(app, cors_allowed_origins="*")
 
 INTERVAL = 1 # update interval in seconds
 
@@ -41,10 +43,10 @@ class PushThread(Thread):
     def get_data(self):
         """Get data from the current index."""
         while not thread_stop_event.isSet():
-            number = round(random.randint(1,101))
+            number = random.randint(1,101)
+            print(f"randint: {number}")
             socketio.emit('newnumber', {'number': number})
             time.sleep(self.delay)
-
     def run(self):
         self.get_data()
 
@@ -70,10 +72,16 @@ data_s1 = data[0]
 data_s2 = data[1]
 data_s3 = data[2]
 
+@app.route('/')
+def index():
+    return
 
-@app.route('/get_values', methods = ['GET', 'POST'])
-def get_timestamp_values():
-    values = MainEngines.query.get(1)
+
+
+@app.route('/timestamp_values/<id>/<time>/<col>', methods = ['GET', 'POST'])
+def get_values(id, time, col):
+    fields = [time, col]
+    values = MainEngines.query.options(load_only(*fields)).get(id)
     return values.get_dict()
 
 @socketio.on('test_message')
@@ -81,27 +89,35 @@ def handle_test_message(message):
     print('received message: ' + message)
 
 @socketio.on('connect')
-def connect():
+def test_connect():
+    emit('connect_response', {'data': 'Connected'})
     global thread
-    print('\n\n\nConnected')
     print(f'New client connected with connection id: {request.sid}')
-    # socketio.connections[request.sid] = {}
     sensor_id = request.args.get('sensor')
-    if not thread.isAlive():
-        print("Starting thread...")
-        thread = PushThread()
-        thread.start()
+    socketio.connections[request.sid] = {
+        'sensor_id': sensor_id,
+        index: 0
+    }
+    # if not thread.isAlive():
+    #     print("Starting thread...")
+    #     thread = PushThread()
+    #     thread.run()
 
+@socketio.on('connect_response')
+def get_index(index):
+    index = index['index']
+    print(index)
+
+@socketio.on('disconnect')
+def disconnect():
+    del socketio.connections[request.sid]
+    print(f'Client {request.sid} has been disconnected.')
+    print(f'Number of remaining connections: {len(socketio.connections)}')
 
 @socketio.on('custom_test')
 def custom_test(message):
     print("\n\nThis is the id:")
     emit('test', {'data': 'connected'})
-
-
-@app.route('/ping')
-def ping():
-    socketio.emit('ping event', {'data': 42})
 
     # connection_id = socket.id
     # sensor_id = socket['sensor']
