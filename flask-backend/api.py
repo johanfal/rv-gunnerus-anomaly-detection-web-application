@@ -65,6 +65,10 @@ socketio.connections = {} # handle connected signals
 def index():
     return
 
+@app.route('/signals', methods = ['GET', 'POST'])
+def get_signals():
+    return {'signals': MainEngines.__table__.columns.keys()}
+
 @app.route('/timestamp_values/<id>/<time>/<col>', methods = ['GET', 'POST'])
 def get_values(id, time, col):
     fields = [time, col]

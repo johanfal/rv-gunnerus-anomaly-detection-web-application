@@ -1,10 +1,8 @@
 import React, {createRef, Component } from 'react';
-import ReactDOM from 'react-dom';
 
 import io from 'socket.io-client';
 import D3TsChart from '../d3-helpers/d3-ts-chart';
 
-import $ from 'jquery';
 
 const MAX_POINTS_TO_STORE = 50;
 const DEFAULT_X_TICKS = 20;

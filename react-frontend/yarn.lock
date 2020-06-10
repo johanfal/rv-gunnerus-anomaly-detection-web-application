@@ -1286,6 +1286,13 @@
     "@types/yargs" "^15.0.0"
     chalk "^3.0.0"
 
+"@khanacademy/react-multi-select@^0.3.3":
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/@khanacademy/react-multi-select/-/react-multi-select-0.3.3.tgz#16230ff1bb48f40d978eae26cec30df4db450f5b"
+  integrity sha512-+RW+mzA+CFxhDxNrYYlKLo5SS50qB/xxS+nBWrYGvIWfBrtsmWMq2DdP8QH8Jrh7zqEyTjea/k8+RT/V/UxLMA==
+  dependencies:
+    fuzzy-match-utils "^1.2.0"
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
@@ -2946,6 +2953,11 @@ class-utils@^0.3.5:
     define-property "^0.2.5"
     isobject "^3.0.0"
     static-extend "^0.1.1"
+
+classnames@^2.2.5:
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/classnames/-/classnames-2.2.6.tgz#43935bffdd291f326dad0a205309b38d00f650ce"
+  integrity sha512-JR/iSQOSt+LQIWwrwEzJ9uk0xfN3mTVYMwt1Ir5mUcSN6pU+V4zQFFaJsclJbPuAUQH+yfWef6tm7l1quW3C8Q==
 
 clean-css@^4.2.3:
   version "4.2.3"
@@ -5155,6 +5167,11 @@ functional-red-black-tree@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/functional-red-black-tree/-/functional-red-black-tree-1.0.1.tgz#1b0ab3bd553b2a0d6399d29c0e3ea0b252078327"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
+
+fuzzy-match-utils@^1.2.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/fuzzy-match-utils/-/fuzzy-match-utils-1.3.0.tgz#7debe2d6dab1dfde3d9526402c3e6b03fc1684f0"
+  integrity sha1-fevi1tqx3949lSZALD5rA/wWhPA=
 
 gauge@~2.7.3:
   version "2.7.4"
@@ -9325,6 +9342,14 @@ react-is@^16.12.0, react-is@^16.6.0, react-is@^16.7.0, react-is@^16.8.1, react-i
   version "16.13.1"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
+
+react-list-select@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/react-list-select/-/react-list-select-0.4.1.tgz#2fe4d8f2eb27203c3d6d2ea2ae44b60aee15b7bf"
+  integrity sha512-LFC8yoqVOHLC9khyEgerFWW+XKGhVLdUu3Nh6Rj2krRnTpYGPgXfRBsmhKye6tvyVw8bt+h8/L13tx6N1T/nZQ==
+  dependencies:
+    classnames "^2.2.5"
+    lodash "^4.17.5"
 
 react-router-dom@^5.2.0:
   version "5.2.0"

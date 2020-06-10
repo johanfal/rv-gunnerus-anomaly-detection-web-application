@@ -1,6 +1,5 @@
 import io from 'socket.io-client';
-import React, { useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react';
 import $ from 'jquery';
 
 

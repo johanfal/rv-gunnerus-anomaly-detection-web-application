@@ -21,7 +21,7 @@
     }
   }
 
-  .z-score {
+  .anomaly {
     color: $dark-red-hex;
 
     .box {
@@ -29,7 +29,7 @@
     }
   }
 
-  .readings.hidden, .z-score.hidden {
+  .readings.hidden, .anomaly.hidden {
     color: $gray-hex;
     .box {
       background-color: $gray-hex;
