@@ -79,11 +79,7 @@ export class Chart extends Component {
     connect = () => {
 
         this.socket = io.connect(`/?sensor=${this.props.sensor_id}`)
-        // this.socket.on('reading', this.storeReading);
-        console.log('connected..')
-        this.socket.on('connect', () => {
-            console.log(this.socket.id)
-        })
+
         this.socket.on('reading', this.storeReading);
 
         // Various Errors handling
