@@ -56,9 +56,6 @@ class PushThread(Thread):
     def run(self):
         self.get_data()
 
-global threads
-threads = {}
-
 socketio.connections = {} # handle connected signals
 
 @app.route('/')
@@ -81,6 +78,7 @@ def handle_test_message(message):
 
 @socketio.on('connect')
 def on_connect():
+    global thread
     socket_id = request.sid
     sensor_id = request.args.get('sensor')
     print(f"New client '{sensor_id}' connected with connection id: {socket_id}")
@@ -89,13 +87,12 @@ def on_connect():
         'sensor_id': sensor_id,
         index: 0
     }
-    if sensor_id not in threads.keys():
-        print(threads.keys())
+    if not thread.isAlive():
         print(f"Starting thread for socket: '{socket_id}'...")
-        threads[sensor_id] = PushThread()
-        threads[sensor_id].id = sensor_id
-        threads[sensor_id].sid = socket_id
-        threads[sensor_id].start()
+        thread = PushThread()
+        thread.id = sensor_id
+        thread.sid = socket_id
+        thread.start()
     else: print(f"Attempted to create duplicate thread for {sensor_id}")
 
 # @socketio.on('threading')

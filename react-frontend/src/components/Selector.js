@@ -1,81 +1,82 @@
-import React, { setState } from 'react';
+import React from 'react';
 import MultiSelect from "@khanacademy/react-multi-select";
-import { formatPrefix } from 'd3';
-
-// var signals;
-
-
-// var options = [];
-// console.log(signals)
-// for(let i = 0; i < signals.length; i++){
-//     options.push(
-//         {
-//             'label': signals[i],
-//             'value': i
-//         }
-//     )
-// }
-const options = [
-  {label: "Exhaust temperature 1", value: 1},
-  {label: "Exhaust temperature 2", value: 2},
-  {label: "Engine speed", value: 3},
-];
-
-// fetch('signals').then(response => response.json().then(data => {
-
-// })
-// );
+import Chart from '../components/Chart';
 
 export class Selector extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-        selected: [],
+        selected: [4,5],
         options: [],
-        opt: []
+        elements: [],
+        items: []
         }
     }
 
     componentDidMount() {
         fetch('signals').then(response => response.json().then(data => {
-            this.signals = data.signals
-            this.opt = []
+            this.signals = data.signals;
+            this.options = []
+            // Filter out 'id' and 'time' as possible signals
+            this.signals = this.signals.filter(e => e !== 'id' && e !== 'time')
+
+            // Loop through signals
             for(let i = 0; i < this.signals.length; i++){
-                if(this.signals[i] !== 'id' && this.signals[i] !== 'time'){
-                this.opt.push(
+
+                // Add signal as selector option with label and value
+                this.options.push(
                                 {
                                     label: this.signals[i],
-                                    value: i
+                                    value: i+1
                             }
                         )
-                }
-                    }
-            this.setState({
-                opt: this.opt
-            })
-            })
-        );
+            }
+
+            // Update state with fetched signal options
+            this.setState({options: this.options})
+        }));
 
     }
 
     componentDidUpdate(){
-        console.log(this.state)
-    }
+        console.log(this.state.selected)
+        }
 
     render() {
-        const {selected} = this.state;
-        const options = this.state.opt;
+
+
+        const elements = ['1'];
+
+        const items = []
+
+        for (const [index, value] of elements.entries()) {
+            items.push(<Chart sensor_id={value} />)
+        }
+
+
+
+        const selected = this.state.selected;
+        const options = this.state.options;
         // const {options} = this.options;
-        return <MultiSelect id='selector'
-            options={options}
-            selected={selected}
-            onSelectedChanged={selected => this.setState({selected})}
-            overrideStrings={{
-                selectSomeItems: "Select signals..",
-                allItemsAreSelected: "All signals selected",
-                selectAll: "Select all"
-                }}
-        />
+        return (
+        <div>
+            <div className="selector-container">
+                <MultiSelect id='selector'
+                    options={options}
+                    selected={selected}
+                    onSelectedChanged={selected => this.setState({selected})}
+                    overrideStrings={{
+                        selectSomeItems: "Select signals..",
+                        allItemsAreSelected: "All signals selected",
+                        selectAll: "Select all"
+                        }}
+                />
+            </div>
+            <div className="charts-container">
+                {items}
+            </div>
+        </div>
+        )
     }
 }
 

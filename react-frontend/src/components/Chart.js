@@ -3,7 +3,6 @@ import React, {createRef, Component } from 'react';
 import io from 'socket.io-client';
 import D3TsChart from '../d3-helpers/d3-ts-chart';
 
-
 const MAX_POINTS_TO_STORE = 50;
 const DEFAULT_X_TICKS = 20;
 const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 'connect_failed', 'error'];

@@ -22,6 +22,8 @@ body {
   h1 {
     color: white;
     font-weight: 400;
+    text-align: center;
+    margin: 15px;
   }
 
   >div>a {
@@ -120,4 +122,19 @@ div.dropdown-heading[style]{
 
 .select-item{
   padding:3px 10px !important;
+}
+
+#ghlink{
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 40px;
+}
+
+a{
+  color:white;
+  text-decoration: none;
+}
+
+a:hover{
+  text-decoration: underline;
 }
