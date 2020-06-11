@@ -81,19 +81,20 @@ def on_connect():
     global thread
     socket_id = request.sid
     sensor_id = request.args.get('sensor')
-    print(f"New client '{sensor_id}' connected with connection id: {socket_id}")
+    if False: # prevent thread
+        print(f"New client '{sensor_id}' connected with connection id: {socket_id}")
 
-    socketio.connections[socket_id] = {
-        'sensor_id': sensor_id,
-        index: 0
-    }
-    if not thread.isAlive():
-        print(f"Starting thread for socket: '{socket_id}'...")
-        thread = PushThread()
-        thread.id = sensor_id
-        thread.sid = socket_id
-        thread.start()
-    else: print(f"Attempted to create duplicate thread for {sensor_id}")
+        socketio.connections[socket_id] = {
+            'sensor_id': sensor_id,
+            index: 0
+        }
+        if not thread.isAlive():
+            print(f"Starting thread for socket: '{socket_id}'...")
+            thread = PushThread()
+            thread.id = sensor_id
+            thread.sid = socket_id
+            thread.start()
+        else: print(f"Attempted to create duplicate thread for {sensor_id}")
 
 # @socketio.on('threading')
 # def get_thread(data):
