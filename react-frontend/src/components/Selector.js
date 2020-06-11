@@ -2,16 +2,31 @@ import React from 'react';
 import MultiSelect from "@khanacademy/react-multi-select";
 import Chart from '../components/Chart';
 
+
+// updateChartStatus = (status) => {
+//     this.setState({status: status})
+// }
+
 export class Selector extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-        selected: [4,5],
+        selected: [], // Change to empty
         options: [],
-        elements: [],
-        items: []
+        signal_connected: {}, // Make this dynamic, just as the previous state below
+        chart_items: {}
+        }
+
+        this.state.prev_selected = this.state.selected;
+        for(let i = 0; i < this.state.selected.length; i++){
+            this.state.signal_connected[this.state.selected[i]] = true
+            this.state.chart_items[this.state.selected[i]] = <Chart sensor_id={this.state.selected[i]} status = {this.state.signal_connected[this.state.selected[i]]}>{this.state.signal_connected[this.state.selected[i]]}</Chart>
         }
     }
+
+    // updateChild(status){
+    //     updateChartStatus(status)
+    // }
 
     componentDidMount() {
         fetch('signals').then(response => response.json().then(data => {
@@ -39,24 +54,47 @@ export class Selector extends React.Component {
     }
 
     componentDidUpdate(){
-        console.log(this.state.selected)
+        const previous = this.state.prev_selected
+        const selected = this.state.selected
+        const added = selected.filter(sig => !previous.includes(sig));
+        const deleted = previous.filter(sig => !selected.includes(sig));
+
+        // If a signal is selected
+        if(added.length > 0){
+            for(let i = 0; i < added.length; i++){
+                    console.log('added ' + added[i])
+                    this.state.signal_connected[added[i]] = true
+                    this.state.chart_items[added[i]] = <Chart sensor_id={added[i]} status={this.state.signal_connected[added[i]]}>{this.state.signal_connected[added[i]]}</Chart>
+
+                }
+            this.setState({prev_selected: this.state.selected})
         }
+
+        // If a signal is deselected
+        if(deleted.length > 0){
+            for(let i = 0; i < deleted.length; i++){
+                // Need to find a way to delete signals
+                this.state.signal_connected[deleted[i]] = false;
+                this.state.chart_items[deleted[i]] = <Chart sensor_id={deleted[i]} status={this.state.signal_connected[deleted[i]]}>{this.state.signal_connected[deleted[i]]}</Chart>
+
+                console.log('deleted ' + deleted[i])
+            }
+            this.setState({prev_selected: this.state.selected})
+        }
+
+        // Set previous states to the currently selected signals
+    }
+
+    // Look into 'getDerivedStateFromProps'
+    // and using 'constructor(props)' in Charts
+    // Spør HT?
 
     render() {
 
-
-        const elements = ['1'];
-
-        const items = []
-
-        for (const [index, value] of elements.entries()) {
-            items.push(<Chart sensor_id={value} />)
-        }
-
-
-
         const selected = this.state.selected;
         const options = this.state.options;
+        const chart_items = this.state.chart_items;
+        console.log(chart_items)
         // const {options} = this.options;
         return (
         <div>
@@ -68,12 +106,14 @@ export class Selector extends React.Component {
                     overrideStrings={{
                         selectSomeItems: "Select signals..",
                         allItemsAreSelected: "All signals selected",
-                        selectAll: "Select all"
+                        selectAll: "Select all",
                         }}
+                    disableSearch={true}
+                    isLoading={false}
                 />
             </div>
             <div className="charts-container">
-                {items}
+                {Object.values(chart_items)}
             </div>
         </div>
         )
