@@ -11,7 +11,9 @@ from models import *
 
 # Instantiate Flask application
 app = Flask(__name__)
-eventlet.monkey_patch()
+
+eventlet.monkey_patch() # ensure appropriate threading behavior
+
 # Add secret key
 app.secret_key = 'change this'
 
@@ -35,11 +37,13 @@ INTERVAL = 1 # update interval in seconds
 thread = Thread()
 thread_stop_event = Event()
 
-class PushThread(Thread):
+class ValueThread(Thread):
+    """Class for handling signal thread, which regularly posts a request to
+    the PostgreSQL database and fetches relevant values."""
     def __init__(self):
-        self.delay = INTERVAL
-        self.index = 1
-        super(PushThread, self).__init__()
+        self.delay = INTERVAL # frequency of updates
+        self.index = 1 # initial index
+        super(ValueThread, self).__init__()
 
     def get_data(self):
         """Get data from the current index."""
@@ -48,22 +52,18 @@ class PushThread(Thread):
             if number1 < 1: number1 = 1
             else: number1 = 0
             number2 = random.randint(1,101)
-            print(f" ix: {self.index}, sensor: {self.id}, socket: {self.sid}")
-            # socketio.emit('get', {'new': self.index, 'sensor_id':self.id})
+            print(f" ix: {self.index}, system: {self.id}, socket: {self.sid}")
+            # socketio.emit('get', {'new': self.index, 'system_id':self.id})
             socketio.emit('reading', {'timestamp':time.time(), 'value':number2, 'anomaly':number1})
             time.sleep(self.delay)
             self.index += 1
     def run(self):
         self.get_data()
 
-socketio.connections = {} # handle connected signals
-
-@app.route('/')
-def index():
-    return
-
 @app.route('/signals', methods = ['GET', 'POST'])
 def get_signals():
+    """Return a list of signals based on the entry table in the PostgreSQL
+    database, which is instantiated through SQL Alchemy in 'models.py'."""
     return {'signals': MainEngines.__table__.columns.keys()}
 
 @app.route('/timestamp_values/<id>/<time>/<col>', methods = ['GET', 'POST'])
@@ -72,51 +72,39 @@ def get_values(id, time, col):
     values = MainEngines.query.options(load_only(*fields)).get(id)
     return values.get_dict()
 
-@socketio.on('test_message')
-def handle_test_message(message):
-    print('received message: ' + message)
+@app.route('/reload', methods = ['GET'])
+def rerender():
+    """If the client window is reloaded and a thread is active in the
+    background, this function discontinues the thread, meaning that upon
+    page reload, a new thread will be initiated with new properties."""
+    if thread.isAlive():
+        global thread_stop_event
+        thread_stop_event.set()
+        print(f"The page has been reloaded, and the thread is discontinued.")
+        return {'thread_stopped': True}
+    return {'thread_stopped': False}
 
 @socketio.on('connect')
 def on_connect():
     global thread
     socket_id = request.sid
-    sensor_id = request.args.get('sensor')
-    if False: # prevent thread
-        print(f"New client '{sensor_id}' connected with connection id: {socket_id}")
+    system_id = request.args.get('system')
+    thread_stop_event.clear()
+    if True: # prevent thread with False
+        print(f"New client '{system_id}' connected with connection id: {socket_id}")
 
-        socketio.connections[socket_id] = {
-            'sensor_id': sensor_id,
-            index: 0
-        }
         if not thread.isAlive():
             print(f"Starting thread for socket: '{socket_id}'...")
-            thread = PushThread()
-            thread.id = sensor_id
+            thread = ValueThread()
+            thread.id = system_id
             thread.sid = socket_id
             thread.start()
-        else: print(f"Attempted to create duplicate thread for {sensor_id}")
-
-# @socketio.on('threading')
-# def get_thread(data):
-#     return
-    # Idea is to return new index and response
-
+        else: print(f"Attempted to create duplicate thread for {system_id}")
 
 @socketio.on('disconnect')
 def disconnect():
-    del socketio.connections[request.sid]
-    print(f'Client {request.sid} has been disconnected.')
-    print(f'Number of remaining connections: {len(socketio.connections)}')
+    system_id = request.args.get('system')
+    print(f"Client '{system_id}' has been disconnected.")
 
-
-# @socketio.on('reading')
-# def reading(data):
-#     response = {
-#         'timestamp': 0,
-#         'value': 0,
-#         'predicted': 0,
-#     }
-#     emit('reading', response)
-
-# if __name__ == '__main__':
-#     socketio.run(app, debug=True)
+if __name__ == '__main__':
+    socketio.run(app, debug=True)

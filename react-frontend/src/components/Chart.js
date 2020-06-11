@@ -54,12 +54,6 @@ export class Chart extends Component {
 
     componentDidMount() {
 
-        if(this.props.status){
-            console.log('CONNECT ME PLEASE')
-        }
-        else if(!this.props.status){
-            console.log('DISCONNECT ME PLEASE')
-        }
         // At this point, this.props includes the input from the called component in "App.js"
         if (this.props['sensor_id'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
         if (this.props['x-ticks'] > MAX_POINTS_TO_STORE) throw new Error(`You cannot display more than ${MAX_POINTS_TO_STORE} 'x-ticks'. `);
@@ -76,7 +70,7 @@ export class Chart extends Component {
             this.tsChart.addSeries(this.seriesList[0]); // readings
             this.tsChart.addSeries(this.seriesList[1]); //z-score
 
-            this.connect();
+            // this.connect();
 
             this.attachFocusWatcher();
     }
@@ -95,7 +89,7 @@ export class Chart extends Component {
     }
 
     componentWillUnmount() {
-        this.socket.disconnect();
+        // Nothing currently necessary
     }
 
     attachFocusWatcher() {

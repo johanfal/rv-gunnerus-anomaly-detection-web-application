@@ -1,6 +1,7 @@
 import React from 'react';
 import MultiSelect from "@khanacademy/react-multi-select";
 import Chart from '../components/Chart';
+import io from 'socket.io-client';
 
 
 // updateChartStatus = (status) => {
@@ -11,24 +12,36 @@ export class Selector extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-        selected: [], // Change to empty
-        options: [],
-        signal_connected: {}, // Make this dynamic, just as the previous state below
-        chart_items: {}
+        selected: [], // signals
+        options: [], // multi-select options
+        chart_items: {}, // rendered charts
+        io_status: false // socket status
         }
+    }
+    socket;
+    system = this.props.system;
+    getStatus = (obj) =>  Object.keys(obj).length > 0
 
-        this.state.prev_selected = this.state.selected;
-        for(let i = 0; i < this.state.selected.length; i++){
-            this.state.signal_connected[this.state.selected[i]] = true
-            this.state.chart_items[this.state.selected[i]] = <Chart sensor_id={this.state.selected[i]} status = {this.state.signal_connected[this.state.selected[i]]}>{this.state.signal_connected[this.state.selected[i]]}</Chart>
+    componentDidMount() {
+        this.on_reload();
+        this.signals();
+    }
+
+    // Restart API thread if the page is reloaded
+    on_reload = () => {
+        if(window.performance) {
+            if(performance.navigation.type === 1) {
+                fetch('reload')
+            }
         }
     }
 
-    // updateChild(status){
-    //     updateChartStatus(status)
-    // }
+    // Get list of signals
+    signals = () => {
+        const selected = this.state.selected;
+        let chart_items = this.state.chart_items;
 
-    componentDidMount() {
+        // API get-request
         fetch('signals').then(response => response.json().then(data => {
             this.signals = data.signals;
             this.options = []
@@ -39,63 +52,79 @@ export class Selector extends React.Component {
             for(let i = 0; i < this.signals.length; i++){
 
                 // Add signal as selector option with label and value
-                this.options.push(
-                                {
+                this.options.push({
                                     label: this.signals[i],
                                     value: i+1
-                            }
-                        )
+                                })
             }
 
-            // Update state with fetched signal options
-            this.setState({options: this.options})
-        }));
+            for(let sig of selected){
+                chart_items[sig]= <Chart sensor_id={sig} key={sig} />
+            }
 
+            // Update mounted states
+            this.setState({
+                            options: this.options,
+                            chart_items: chart_items,
+                            io_status: this.getStatus(chart_items)
+                        })
+        }));
     }
 
-    componentDidUpdate(){
-        const previous = this.state.prev_selected
-        const selected = this.state.selected
-        const added = selected.filter(sig => !previous.includes(sig));
-        const deleted = previous.filter(sig => !selected.includes(sig));
+    connect = () => {
+        io.connect(`/?system=${this.system}`)
+    }
+
+    componentDidUpdate(_prevProps, prevState){
+
+        console.log(prevState)
+        console.log(this.state)
+        const curr_selected = this.state.selected;
+        const status = this.state.io_status;
+        let chart_items = this.state.chart_items;
+        const added = curr_selected.filter(sig => !prevState.selected.includes(sig));
+        const deleted = prevState.selected.filter(sig => !curr_selected.includes(sig));
+
+        if(status !== prevState.io_status){
+            status ? this.socket = io.connect(`/?system=${this.system}`) : this.socket.disconnect();
+
+            // status ? this.test1() : this.test2() // REMOVE
+        }
 
         // If a signal is selected
         if(added.length > 0){
-            for(let i = 0; i < added.length; i++){
-                    console.log('added ' + added[i])
-                    this.state.signal_connected[added[i]] = true
-                    this.state.chart_items[added[i]] = <Chart sensor_id={added[i]} status={this.state.signal_connected[added[i]]}>{this.state.signal_connected[added[i]]}</Chart>
-
+            for(let sig of added){
+                    console.log('added ' + sig)
+                    chart_items[sig] = <Chart sensor_id={sig} key={sig} />
                 }
-            this.setState({prev_selected: this.state.selected})
-        }
 
-        // If a signal is deselected
-        if(deleted.length > 0){
-            for(let i = 0; i < deleted.length; i++){
-                // Need to find a way to delete signals
-                this.state.signal_connected[deleted[i]] = false;
-                this.state.chart_items[deleted[i]] = <Chart sensor_id={deleted[i]} status={this.state.signal_connected[deleted[i]]}>{this.state.signal_connected[deleted[i]]}</Chart>
+            this.setState({
+                            prev_selected: curr_selected,
+                            chart_items: chart_items,
+                            io_status: this.getStatus(chart_items)
+                        })
+                    }
 
-                console.log('deleted ' + deleted[i])
+                    // If a signal is deselected
+                    if(deleted.length > 0){
+                        for(let sig of deleted){
+                            delete chart_items[sig];
+                            console.log('deleted ' + sig)
             }
-            this.setState({prev_selected: this.state.selected})
+
+            this.setState({
+                            chart_items: chart_items,
+                            io_status: this.getStatus(chart_items)
+                        })
         }
-
-        // Set previous states to the currently selected signals
     }
-
-    // Look into 'getDerivedStateFromProps'
-    // and using 'constructor(props)' in Charts
-    // Spør HT?
 
     render() {
 
         const selected = this.state.selected;
         const options = this.state.options;
         const chart_items = this.state.chart_items;
-        console.log(chart_items)
-        // const {options} = this.options;
+
         return (
         <div>
             <div className="selector-container">
