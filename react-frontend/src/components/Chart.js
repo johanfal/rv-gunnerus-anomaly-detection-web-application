@@ -88,10 +88,6 @@ export class Chart extends Component {
         });
     }
 
-    componentWillUnmount() {
-        // Nothing currently necessary
-    }
-
     attachFocusWatcher() {
         window.focused = true;
         window.onblur = () => {
