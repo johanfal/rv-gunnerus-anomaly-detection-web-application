@@ -38,24 +38,25 @@ thread = Thread()
 thread_stop_event = Event()
 
 class ValueThread(Thread):
-    """Class for handling signal thread, which regularly posts a request to
-    the PostgreSQL database and fetches relevant values."""
+    """Handles signal thread, which allows the dynamic relationship between
+    the database and client, allowing for a realtime transmission of data
+    through websockets."""
+
     def __init__(self):
+        """Instantiate class object."""
         self.delay = INTERVAL # frequency of updates
         self.index = 1 # initial index
         super(ValueThread, self).__init__()
 
     def get_data(self):
-        """Get data from the current index."""
+        """Continuously emit information about the current database index to
+        the client, which fetches data based on the index."""
         while not thread_stop_event.is_set():
-            number1 = random.randint(0,4)
-            if number1 < 1: number1 = 1
-            else: number1 = 0
-            number2 = random.randint(1,101)
             print(f" ix: {self.index}, system: {self.id}, socket: {self.sid}")
-            socketio.emit('new_index', {'new_index': self.index})
+            socketio.emit('index', {'index': self.index})
             time.sleep(self.delay)
             self.index += 1
+
     def run(self):
         self.get_data()
 
@@ -65,9 +66,12 @@ def get_signals():
     database, which is instantiated through SQL Alchemy in 'models.py'."""
     return {'signals': MainEngines.__table__.columns.keys()}
 
-@app.route('/timestamp_values/<id>/<time>/<col>', methods = ['GET', 'POST'])
-def get_values(id, time, col):
-    fields = [time, col]
+@app.route('/timestamp_values/<id>/<cols_str>', methods = ['GET', 'POST'])
+def get_values(id, cols_str):
+    columns = cols_str.split(',') # create a list from columns string
+    print(columns, type(columns))
+    fields = ['time']
+    fields.extend(columns)
     values = MainEngines.query.options(load_only(*fields)).get(id)
     return values.get_dict()
 
