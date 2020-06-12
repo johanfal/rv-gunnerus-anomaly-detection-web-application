@@ -3,8 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class MainEngines(db.Model):
-    """User model."""
+    """User model, which converts to a call to a defined table in the
+    Heroku-PostgreSQL.database. A table could also be Pythonically made
+    using the below methods from SQL Alchemy, as well as a create_all()
+    method. Read the SQL Alchemy documentation for information about
+    implementing new tables."""
+    # Table name (if not specified, table name will default to class name):
     __tablename__ = "MainEngines"
+
+    # Define all desired columns (if reading from an existing table, the
+    # column names are case sensitive and must match exactly. Thus, it is
+    # possible to exclude columns which are unwanted):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     time = db.Column(db.DateTime, unique=True, nullable=False)
     me1_backupbatt = db.Column(db.Float)
@@ -19,12 +28,13 @@ class MainEngines(db.Model):
     me1_power = db.Column(db.Float)
     me1_startbatt = db.Column(db.Float)
     me1_coolanttemp = db.Column(db.Float)
+
     def get_dict(self):
-        dct = {key:value for key, value in self.__dict__.items() if not key.startswith('__') and not callable(value) and not key.startswith('_')}
-        return dct
-
-
-class Users(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(25), unique=True, nullable=False)
-    password = db.Column(db.String(), nullable=False)
+        """Get a dictionary of all column names based on the class methods in
+        the table 'MainEngines'. The dictionary filters out methods that are
+        not signal names by removing underscore."""
+        return {
+                key:value for key, value in self.__dict__.items() \
+                if not key.startswith('__') and not callable(value) \
+                and not key.startswith('_')
+            }
