@@ -4,13 +4,17 @@ import Selector from './components/Selector'
 
 function App() {
   return (
-  <div>
-    <h1>ANOMALY DETECTION</h1>
-    <div id="ghlink">
-      <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
+  <div className="content">
+    <div id="maincontent">
+    <div className="header-container">
+      <h1>ANOMALY DETECTION</h1>
+      <div id="link-container">
+        <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">[ GitHub ]</a>
+      </div>
     </div>
-    {/* <Upload /> */}
-      <Selector system='MainEngine1'/>
+      {/* <Upload /> */}
+        <Selector system='MainEngine1'/>
+    </div>
   </div>
   )
 };
