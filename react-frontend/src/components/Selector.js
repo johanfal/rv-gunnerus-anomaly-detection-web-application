@@ -24,6 +24,7 @@ export class Selector extends React.Component {
 
     // If component is succesfully mounted
     componentDidMount() {
+
         this.on_reload(); // call reload function
         this.signals(); // get list of signals based on API call to database
     }
@@ -79,32 +80,24 @@ export class Selector extends React.Component {
 
     componentDidUpdate(_prevProps, prevState){
         let update_state = false; // update with setState at end of lifecycle method
-        const curr_selected = this.state.selected;
+        const selected = this.state.selected;
         const sio_status = this.state.sio_status;
         let chart_items = this.state.chart_items;
-        const added = curr_selected.filter(sig => !prevState.selected.includes(sig));
-        const deleted = prevState.selected.filter(sig => !curr_selected.includes(sig));
+        const added = selected.filter(sig => !prevState.selected.includes(sig));
+        const deleted = prevState.selected.filter(sig => !selected.includes(sig));
 
-        if(sio_status !== prevState.sio_status){
-            sio_status ? this.connect() : this.socket.disconnect();
-        }
+        this.manage_io_connection(sio_status, prevState.sio_status)
 
         // If a signal is selected
         if(added.length > 0){
             update_state = true;
-            for(let sig of added){
-                    console.log('added ' + sig)
-                    chart_items[sig] = <Chart sensor_id={sig} key={sig} />
-                }
+            chart_items = this.add_new_charts(added, chart_items)
         }
 
         // If a signal is deselected
         if(deleted.length > 0){
             update_state = true;
-            for(let sig of deleted){
-                delete chart_items[sig];
-                console.log('deleted ' + sig)
-            }
+            chart_items = this.delete_unselected_charts(deleted, chart_items)
         }
 
         if(sio_status){
@@ -114,28 +107,58 @@ export class Selector extends React.Component {
                 // SOMETHNIG BOUT THIS IS WORKING HUN
             }
         }
-        this.get_values(sio_status)
+
+        if(sio_status){
+            this.get_values(selected)
+        }
 
         if(update_state){
-            this.setState({
-                chart_items: chart_items,
-                sio_status: this.getStatus(chart_items),
-                modified: true
-            })
+            this.set_updated_state(chart_items)
         }
     }
 
-    get_values = (sio_status) => {
-        if(sio_status){
-            // this.socket.emit('register_index', prev_index)
-                this.socket.on('new_index', (data) => {
-                    console.log(data.new_index, this.state.selected);
-
-                // fetch(
-                //     `/timestamp_values/${index}/${curr_selected}`
-                // )
-            });
+    manage_io_connection = (current_status, previous_status) => {
+        if(current_status !== previous_status){
+            current_status ? this.connect() : this.socket.disconnect();
         }
+    }
+
+    add_new_charts = (newly_selected, selected_items) => {
+        for(let sig of newly_selected){
+            console.log('added ' + sig)
+            selected_items[sig] = <Chart sensor_id={sig} key={sig} />;
+        }
+        return selected_items;
+    }
+
+    delete_unselected_charts = (newly_deselected, selected_items) => {
+        for(let sig of newly_deselected){
+            delete selected_items[sig];
+            console.log('deleted ' + sig)
+        }
+        return selected_items;
+    }
+
+    get_values = (selected) => {
+        // this.socket.emit('register_index', prev_index)
+        this.socket.on('index', (data) => {
+            // Create a string with each selected column with comma delimitation:
+            let columns_string = selected.join()
+            console.log(data.index, selected);
+            fetch(`/timestamp_values/${data.index}/${columns_string}`).then(
+                response => response.json().then(data => {
+                    console.log(data);
+                })
+            )
+        });
+    }
+
+    set_updated_state = (selected_items) => {
+        this.setState({
+            chart_items: selected_items,
+            sio_status: this.getStatus(selected_items),
+            modified: true
+        })
     }
 
     render() {
