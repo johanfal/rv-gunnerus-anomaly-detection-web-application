@@ -32,7 +32,7 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
 
-INTERVAL = 1 # update interval in seconds
+INTERVAL = 2 # update interval in seconds
 
 thread = Thread()
 thread_stop_event = Event()
@@ -47,14 +47,13 @@ class ValueThread(Thread):
 
     def get_data(self):
         """Get data from the current index."""
-        while not thread_stop_event.isSet():
+        while not thread_stop_event.is_set():
             number1 = random.randint(0,4)
             if number1 < 1: number1 = 1
             else: number1 = 0
             number2 = random.randint(1,101)
             print(f" ix: {self.index}, system: {self.id}, socket: {self.sid}")
-            # socketio.emit('get', {'new': self.index, 'system_id':self.id})
-            socketio.emit('reading', {'timestamp':time.time(), 'value':number2, 'anomaly':number1})
+            socketio.emit('new_index', {'new_index': self.index})
             time.sleep(self.delay)
             self.index += 1
     def run(self):
@@ -73,7 +72,7 @@ def get_values(id, time, col):
     return values.get_dict()
 
 @app.route('/reload', methods = ['GET'])
-def rerender():
+def stop_thread():
     """If the client window is reloaded and a thread is active in the
     background, this function discontinues the thread, meaning that upon
     page reload, a new thread will be initiated with new properties."""
@@ -93,7 +92,7 @@ def on_connect():
     if True: # prevent thread with False
         print(f"New client '{system_id}' connected with connection id: {socket_id}")
 
-        if not thread.isAlive():
+        if not thread.is_alive():
             print(f"Starting thread for socket: '{socket_id}'...")
             thread = ValueThread()
             thread.id = system_id
