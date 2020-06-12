@@ -107,7 +107,7 @@ span {
   }
 
 
-div.dropdown-heading[style]{
+div.dropdown-heading{
   height:55px !important;
   border: 1px !important;
   border: 1px solid !important;
@@ -124,10 +124,10 @@ div.dropdown-heading[style]{
   padding:3px 10px !important;
 }
 
-#ghlink{
+#link-container{
   text-align: center;
   margin-top: 5px;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 
 a{
@@ -137,4 +137,10 @@ a{
 
 a:hover{
   text-decoration: underline;
+}
+
+.dropdown-heading-dropdown-arrow{
+  span{
+    margin-bottom: 2px !important;
+  }
 }
