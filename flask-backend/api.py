@@ -27,7 +27,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # prevent console warning
 
 # Initialize PostgreSQL Heroku database with SQL Alchemy
 db = SQLAlchemy(app)
-
+db.init_app(app)
 # Initialize Flask-SocketIO
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
@@ -52,10 +52,12 @@ class ValueThread(Thread):
         """Continuously emit information about the current database index to
         the client, which fetches data based on the index."""
         while not thread_stop_event.is_set():
-            print(f" ix: {self.index}, system: {self.id}, socket: {self.sid}")
-            socketio.emit('index', {'index': self.index})
-            time.sleep(self.delay)
-            self.index += 1
+            with app.app_context():
+                values = MainEngines.query.options(load_only(*self.fields)).get(self.index).get_dict()
+                values['time'] = str(values['time'])
+                socketio.emit('values', values)
+                time.sleep(self.delay)
+                self.index += 1
 
     def run(self):
         self.get_data()
@@ -66,14 +68,16 @@ def get_signals():
     database, which is instantiated through SQL Alchemy in 'models.py'."""
     return {'signals': MainEngines.__table__.columns.keys()}
 
-@app.route('/timestamp_values/<id>/<cols_str>', methods = ['GET', 'POST'])
-def get_values(id, cols_str):
+@app.route('/timestamp_values/<cols_str>', methods = ['GET', 'POST'])
+def get_values(cols_str):
     columns = cols_str.split(',') # create a list from columns string
-    print(columns, type(columns))
     fields = ['time']
     fields.extend(columns)
-    values = MainEngines.query.options(load_only(*fields)).get(id)
-    return values.get_dict()
+    thread.fields = fields
+    if not thread.is_alive():
+        thread.start()
+    return {'thread_started':True}
+    # return values.get_dict()
 
 @app.route('/reload', methods = ['GET'])
 def stop_thread():
@@ -83,7 +87,7 @@ def stop_thread():
     if thread.isAlive():
         global thread_stop_event
         thread_stop_event.set()
-        print(f"The page has been reloaded, and the thread is discontinued.")
+        print(f"Upon page reload, the thread has been discontinued.")
         return {'thread_stopped': True}
     return {'thread_stopped': False}
 
@@ -93,16 +97,13 @@ def on_connect():
     socket_id = request.sid
     system_id = request.args.get('system')
     thread_stop_event.clear()
-    if True: # prevent thread with False
-        print(f"New client '{system_id}' connected with connection id: {socket_id}")
-
-        if not thread.is_alive():
-            print(f"Starting thread for socket: '{socket_id}'...")
-            thread = ValueThread()
-            thread.id = system_id
-            thread.sid = socket_id
-            thread.start()
-        else: print(f"Attempted to create duplicate thread for {system_id}")
+    print(f"New client '{system_id}' connected with connection id: {socket_id}")
+    if not thread.is_alive():
+        print(f"Starting thread for socket: '{socket_id}'...")
+        thread = ValueThread()
+        thread.id = system_id
+        thread.sid = socket_id
+    else: print(f"Attempting to connect while thread is active")
 
 @socketio.on('disconnect')
 def disconnect():

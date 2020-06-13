@@ -104,7 +104,6 @@ export class Selector extends React.Component {
             if(added.length > 0 || deleted.length > 0 || prevState.modified){
                 this.socket.disconnect()
                 this.connect()
-                // SOMETHNIG BOUT THIS IS WORKING HUN
             }
         }
 
@@ -140,17 +139,12 @@ export class Selector extends React.Component {
     }
 
     get_values = (selected) => {
-        // this.socket.emit('register_index', prev_index)
-        this.socket.on('index', (data) => {
-            // Create a string with each selected column with comma delimitation:
-            let columns_string = selected.join()
-            console.log(data.index, selected);
-            fetch(`/timestamp_values/${data.index}/${columns_string}`).then(
-                response => response.json().then(data => {
-                    console.log(data);
-                })
-            )
-        });
+        if(selected.length > 0){
+            fetch(`/timestamp_values/${selected.join()}`)
+            this.socket.on('values', (values) => {
+                console.log(values);
+            });
+        }
     }
 
     set_updated_state = (selected_items) => {
