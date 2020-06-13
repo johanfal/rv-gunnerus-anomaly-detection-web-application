@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import eventlet
 from flask_socketio import SocketIO, send, emit
 from sqlalchemy.orm import load_only
+from sqlalchemy import create_engine
 
 from functions import *
 from models import *
@@ -24,6 +25,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://lxwpcwfzestkpm:45f3f577' \
                                         '0-177.compute-1.amazonaws.com:5432' \
                                         '/d8q777aul5jc81'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # prevent console warning
+
+engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Initialize PostgreSQL Heroku database with SQL Alchemy
 db = SQLAlchemy(app)
@@ -55,6 +58,7 @@ class ValueThread(Thread):
             with app.app_context():
                 values = MainEngines.query.options(load_only(*self.fields)).get(self.index).get_dict()
                 values['time'] = str(values['time'])
+                print(self.fields)
                 socketio.emit('values', values)
                 time.sleep(self.delay)
                 self.index += 1
@@ -84,7 +88,7 @@ def stop_thread():
     """If the client window is reloaded and a thread is active in the
     background, this function discontinues the thread, meaning that upon
     page reload, a new thread will be initiated with new properties."""
-    if thread.isAlive():
+    if thread.is_alive():
         global thread_stop_event
         thread_stop_event.set()
         print(f"Upon page reload, the thread has been discontinued.")
@@ -108,6 +112,7 @@ def on_connect():
 @socketio.on('disconnect')
 def disconnect():
     system_id = request.args.get('system')
+    engine.dispose()
     print(f"Client '{system_id}' has been disconnected.")
 
 if __name__ == '__main__':
