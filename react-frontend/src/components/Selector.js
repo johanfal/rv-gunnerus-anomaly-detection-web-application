@@ -13,7 +13,7 @@ export class Selector extends React.Component {
         selected: [], // signals
         options: [], // multi-select options
         chart_items: {}, // rendered charts
-        sio_status: false // socket status
+        sio_status: false, // socket status
         }
     }
     socket;
@@ -60,8 +60,9 @@ export class Selector extends React.Component {
                                 })
             }
 
-            for(let sig of selected){
-                chart_items[sig]= <Chart sensor_id={sig} key={sig} />
+            // Delete this?
+            for(let sig of selected){ // this will perhaps cause error due to lack of signal prop
+                chart_items[sig]= <Chart sensor_id={sig} key={sig}/>
             }
 
             // Update mounted states
@@ -125,8 +126,9 @@ export class Selector extends React.Component {
 
     add_new_charts = (newly_selected, selected_items) => {
         for(let sig of newly_selected){
-            console.log('added ' + sig)
-            selected_items[sig] = <Chart sensor_id={sig} key={sig} />;
+            selected_items[sig] = this.add_chart(sig, sig, {'id': undefined, 'time': undefined, 'signal': undefined})
+            // selected_items[sig] = <Chart sensor_id={sig} key={sig} values={{'id': undefined,'signal': undefined,'time': undefined}}
+                            // />;
         }
         return selected_items;
     }
@@ -134,29 +136,35 @@ export class Selector extends React.Component {
     delete_unselected_charts = (newly_deselected, selected_items) => {
         for(let sig of newly_deselected){
             delete selected_items[sig];
-            console.log('deleted ' + sig)
         }
         return selected_items;
-    }
-
-    set_chart_values = (values) => {
-        let chart_items = this.state.chart_items;
-        // Get values of selected signals
-        // const values = this.get_values(selected)
-        console.log('Now im here')
-        // if(values !== false){
-            // console.log('Adjustments here')
-        // }
-        return chart_items;
     }
 
     get_values = (selected) => {
         if(selected.length > 0){
             fetch(`/timestamp_values/${selected.join()}`)
-            this.socket.on('values', (values) => {
-                console.log(values);
-            });
+            this.socket.on('values', this.store_reading);
         }
+    }
+
+    store_reading = (values) => {
+        var chart_items = {}
+        const selected = this.state.selected;
+        const time = values.time;
+        const id = values.id;
+        for(let sig of selected){
+            chart_items[sig] = this.add_chart(sig, sig, {'id': id, 'time': time, 'signal': values[sig]})
+                // chart_items[sig] = <Chart sensor_id={sig} key={sig} values={{'id': undefined,'signal': undefined,'time': undefined}}
+                // chart_items[key].props.time = values.time
+                // chart_items[key].props[key] = value
+        }
+            this.setState({
+                chart_items:chart_items
+            });
+    }
+
+    add_chart = (sensor, key, values) => {
+        return <Chart sensor_id={sensor} key={key} values={values} />
     }
 
     set_updated_state = (selected_items) => {

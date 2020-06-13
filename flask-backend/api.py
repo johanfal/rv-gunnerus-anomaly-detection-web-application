@@ -58,7 +58,6 @@ class ValueThread(Thread):
             with app.app_context():
                 values = MainEngines.query.options(load_only(*self.fields)).get(self.index).get_dict()
                 values['time'] = str(values['time'])
-                print(self.fields)
                 socketio.emit('values', values)
                 time.sleep(self.delay)
                 self.index += 1

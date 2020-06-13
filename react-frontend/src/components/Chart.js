@@ -78,9 +78,25 @@ export class Chart extends Component {
             this.attachFocusWatcher();
     }
 
-    static getDerivedStateFromProps(newProps, newState){
-        console.log('Hello from getDerivedStateFromProps')
-        console.log(newProps, newState)
+    static getDerivedStateFromProps(next_props, prev_state){
+        // console.log(`Hello from getDerivedStateFromProps ${next_props.sensor_id}`)
+        // console.log(next_props)
+        // console.log(prev_state)
+        return {data: next_props.sensor_id}
+    }
+
+    shouldComponentUpdate(next_props, next_state){
+        // console.log(`Hello from shouldComponentUpdate`)
+        // console.log(next_props)
+        // console.log(next_state)
+        return true;
+    }
+
+    componentDidUpdate(prev_props, prev_state){
+        // console.log(this.state.data)
+        // console.log(`Hello from componentDidUpdate`)
+        // console.log(prev_props)
+        // console.log(prev_state)
     }
 
 
@@ -157,7 +173,13 @@ export class Chart extends Component {
 
     render = () => (
         <div className="card" ref={this.wrapper}>
-
+            <div>
+                <ul>
+                    <li>{this.props.values['id']}</li>
+                    <li>{this.props.values['time']}</li>
+                    <li>{this.props.values['signal']}</li>
+                </ul>
+            </div>
             <h2>{!this.state.lastTimestamp ? 'Connecting...' : `Sensor ${this.props.sensorId}`}</h2>
 
             <span className={'status ' + (this.state.connected ? 'success' : 'danger')}>
