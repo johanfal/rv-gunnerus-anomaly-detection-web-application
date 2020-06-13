@@ -19,40 +19,43 @@ const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 
 * 3. `componentWillUnmount()` disconects from socket.
 */
 export class Chart extends Component {
+    constructor(props) {
+        super(props)
 
-    seriesList = [
-        {
-            name: 'sensor-data',
-            type: 'LINE',
-            stroke: '#038C7E',
-            strokeWidth: 5,
-            label: 'Readings',
-            labelClass: 'readings',
-        },
-        {
-            name: 'anomaly',
-            type: 'AREA',
-            fill: 'rgba(216, 13, 49, 0.2)',
-            stroke: 'transparent',
-            strokeWidth: 0,
-            label: 'Peaks',
-            labelClass: 'anomaly',
+        this.state = {
+            data: [],
+            lastTimestamp: null,
+            connected: false,
+            error: '',
+            status: null,
         }
-    ]
-    tsChart = new D3TsChart();
-    socket;
-    state = {
-        data: [],
-        lastTimestamp: null,
-        connected: false,
-        error: '',
-        status: null,
+
+        this.seriesList = [
+            {
+                name: 'sensor-data',
+                type: 'LINE',
+                stroke: '#038C7E',
+                strokeWidth: 5,
+                label: 'Readings',
+                labelClass: 'readings',
+            },
+            {
+                name: 'anomaly',
+                type: 'AREA',
+                fill: 'rgba(216, 13, 49, 0.2)',
+                stroke: 'transparent',
+                strokeWidth: 0,
+                label: 'Peaks',
+                labelClass: 'anomaly',
+            }
+        ]
+        this.tsChart = new D3TsChart();
+        this.wrapper = createRef();
     }
 
-    // updateState = updateState.bind(this)
-    wrapper = createRef();
+    socket;
 
-    componentDidMount() {
+        componentDidMount() {
 
         // At this point, this.props includes the input from the called component in "App.js"
         if (this.props['sensor_id'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
@@ -73,6 +76,11 @@ export class Chart extends Component {
             // this.connect();
 
             this.attachFocusWatcher();
+    }
+
+    static getDerivedStateFromProps(newProps, newState){
+        console.log('Hello from getDerivedStateFromProps')
+        console.log(newProps, newState)
     }
 
 
