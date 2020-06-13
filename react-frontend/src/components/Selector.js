@@ -13,14 +13,11 @@ export class Selector extends React.Component {
         selected: [], // signals
         options: [], // multi-select options
         chart_items: {}, // rendered charts
-        sio_status: false, // socket status
-        // index: 1, // timestep tracker
+        sio_status: false // socket status
         }
     }
     socket;
     system = this.props.system;
-
-    getStatus = (obj) =>  Object.keys(obj).length > 0
 
     // If component is succesfully mounted
     componentDidMount() {
@@ -28,6 +25,8 @@ export class Selector extends React.Component {
         this.on_reload(); // call reload function
         this.signals(); // get list of signals based on API call to database
     }
+
+    getStatus = (obj) =>  Object.keys(obj).length > 0
 
     // Restart API thread if the page is reloaded
     on_reload = () => {
@@ -78,15 +77,15 @@ export class Selector extends React.Component {
         this.socket = io.connect(`/?system=${this.system}`)
     }
 
-    componentDidUpdate(_prevProps, prevState){
+    componentDidUpdate(_prev_props, prev_state){
         let update_state = false; // update with setState at end of lifecycle method
         const selected = this.state.selected;
         const sio_status = this.state.sio_status;
         let chart_items = this.state.chart_items;
-        const added = selected.filter(sig => !prevState.selected.includes(sig));
-        const deleted = prevState.selected.filter(sig => !selected.includes(sig));
+        const added = selected.filter(sig => !prev_state.selected.includes(sig));
+        const deleted = prev_state.selected.filter(sig => !selected.includes(sig));
 
-        this.manage_io_connection(sio_status, prevState.sio_status)
+        this.manage_io_connection(sio_status, prev_state.sio_status)
 
         // If a signal is selected
         if(added.length > 0){
@@ -100,13 +99,15 @@ export class Selector extends React.Component {
             chart_items = this.delete_unselected_charts(deleted, chart_items)
         }
 
+        // Update socketIO connection or disconnection
         if(sio_status){
-            if(added.length > 0 || deleted.length > 0 || prevState.modified){
+            if(added.length > 0 || deleted.length > 0 || prev_state.modified){
                 this.socket.disconnect()
                 this.connect()
             }
         }
 
+        // If socketIO is connected, get values
         if(sio_status){
             this.get_values(selected)
         }
@@ -136,6 +137,17 @@ export class Selector extends React.Component {
             console.log('deleted ' + sig)
         }
         return selected_items;
+    }
+
+    set_chart_values = (values) => {
+        let chart_items = this.state.chart_items;
+        // Get values of selected signals
+        // const values = this.get_values(selected)
+        console.log('Now im here')
+        // if(values !== false){
+            // console.log('Adjustments here')
+        // }
+        return chart_items;
     }
 
     get_values = (selected) => {
