@@ -35,7 +35,7 @@ db.init_app(app)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
 
-INTERVAL = 2 # update interval in seconds
+INTERVAL = 1 # update interval in seconds
 
 thread = Thread()
 thread_stop_event = Event()

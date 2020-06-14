@@ -102,7 +102,6 @@ export default class D3TsChart {
 
     setSeriesData(name, data, adjustAxes = true) {
         // if (!window.focused) return;
-        console.log(name, this.seriesDict)
         const series = this.seriesDict[name];
 
         this.adjustDimensions();
@@ -154,13 +153,13 @@ export default class D3TsChart {
     // Helper functions
     adjustAxes(data) {
         const maxValue = d3.max(data, (d) => d.value);
-
+        const minValue = d3.min(data, (d) => d.value);
         this.xScale.domain(d3.extent(data, (d) => d.timestamp));
         this.xAxisRef
             .transition().duration(TRANSITION_DURATION).ease(d3.easeLinear)
             .call(d3.axisBottom(this.xScale));
 
-        this.yScale.domain([0, maxValue]);
+        this.yScale.domain([minValue, maxValue]);
         this.yAxisRef
             .transition().duration(TRANSITION_DURATION).ease(d3.easeLinear)
             .call(

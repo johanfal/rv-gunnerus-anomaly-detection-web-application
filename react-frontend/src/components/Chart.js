@@ -1,11 +1,10 @@
 import React, {createRef, Component } from 'react';
 
-import io from 'socket.io-client';
 import D3TsChart from '../d3-helpers/d3-ts-chart';
 
 const MAX_POINTS_TO_STORE = 50;
 const DEFAULT_X_TICKS = 20;
-const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 'connect_failed', 'error'];
+// const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 'connect_failed', 'error'];
 
 /**
 *  Component cycle:
@@ -24,7 +23,7 @@ export class Chart extends Component {
 
         this.state = {
             data: [],
-            lastTimestamp: null,
+            last_time_str: null,
             connected: false,
             error: '',
             status: null,
@@ -36,7 +35,7 @@ export class Chart extends Component {
                 type: 'LINE',
                 stroke: '#038C7E',
                 strokeWidth: 5,
-                label: 'Readings',
+                label: 'Actual',
                 labelClass: 'readings',
             },
             {
@@ -45,9 +44,17 @@ export class Chart extends Component {
                 fill: 'rgba(216, 13, 49, 0.2)',
                 stroke: 'transparent',
                 strokeWidth: 0,
-                label: 'Peaks',
+                label: 'Anomaly',
                 labelClass: 'anomaly',
-            }
+            },
+            // {
+            //     name: 'prediction',
+            //     type: 'LINE',
+            //     stroke: '#038C7E',
+            //     strokeWidth: 5,
+            //     label: 'Prediction',
+            //     labelClass: 'prediction'
+            // }
         ]
         this.tsChart = new D3TsChart();
         this.wrapper = createRef();
@@ -61,7 +68,7 @@ export class Chart extends Component {
         if (this.props['sensor_id'] === undefined) throw new Error('You have to pass \'sensorId\' prop to Chart component');
         if (this.props['x-ticks'] > MAX_POINTS_TO_STORE) throw new Error(`You cannot display more than ${MAX_POINTS_TO_STORE} 'x-ticks'. `);
 
-        const node = this.wrapper.current;
+        const node = this.wrapper.current; // used for node ref
 
         this.tsChart.init({
             elRef: node.getElementsByClassName('chart-container')[0],
@@ -71,47 +78,69 @@ export class Chart extends Component {
         });
 
             this.tsChart.addSeries(this.seriesList[0]); // readings
-            this.tsChart.addSeries(this.seriesList[1]); //z-score
+            this.tsChart.addSeries(this.seriesList[1]); // anomaly
+            // this.tsChart.addSeries(this.seriesList[2]); // prediction
 
-            // this.connect();
 
             this.attachFocusWatcher();
     }
 
     static getDerivedStateFromProps(next_props, prev_state){
-        // console.log(`Hello from getDerivedStateFromProps ${next_props.sensor_id}`)
-        // console.log(next_props)
-        // console.log(prev_state)
-        return {data: next_props.sensor_id}
+        // You are currently working on finding a condition that removes duplicates :)
+        // Almost there!
+
+        if(next_props.values.time === undefined){
+            return {last_time_str: null,
+                    connected: false,}
+        }
+        const values = next_props.values;
+
+        const datetime = new Date(values.time);
+        const timestamp = Date.parse(datetime);
+        const time_str = datetime.toLocaleTimeString();
+        var last_timestamp = null;
+        if(prev_state.data.length > 0){
+            last_timestamp = prev_state.data[prev_state.data.length-1].timestamp
+        }
+
+        if(timestamp !== last_timestamp){
+            const data = prev_state.data;
+            const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
+            console.log(data)
+            const new_values = {
+                timestamp: timestamp,
+                value: values.signal,
+                anomaly: 0
+            }
+            // Need to replace 0 below with anomaly 1 or 0
+            data.push(new_values);
+
+            // This is where you return the new state!
+            // Nearly there, great job fren
+            return {data: data.slice(pointsToStore),
+                    connected: true,
+                    error: false,
+                    last_time_str: time_str
+                }
+        }
     }
 
-    shouldComponentUpdate(next_props, next_state){
-        // console.log(`Hello from shouldComponentUpdate`)
-        // console.log(next_props)
-        // console.log(next_state)
-        return true;
+    shouldComponentUpdate(_next_props, _next_state){return true;}
+
+    componentDidUpdate(_prev_props, _prev_state){
+        this.updateChart();
     }
 
-    componentDidUpdate(prev_props, prev_state){
-        // console.log(this.state.data)
-        // console.log(`Hello from componentDidUpdate`)
-        // console.log(prev_props)
-        // console.log(prev_state)
-    }
+        // Reading consists of:
+        // - Timestamp
+        // - Value
+        // - Z-score
 
+        // Modifications:
+        // - Anomaly
+        // - Predicted value
 
-    connect = () => {
-
-        this.socket = io.connect(`/?sensor=${this.props.sensor_id}`)
-
-        this.socket.on('reading', this.storeReading);
-
-        // Various Errors handling
-        SOCKETIO_ERRORS.forEach(errType => {
-            this.socket.on(errType, (error) => this.setError(errType, error));
-        });
-    }
-
+    // Handle window focus
     attachFocusWatcher() {
         window.focused = true;
         window.onblur = () => {
@@ -120,34 +149,6 @@ export class Chart extends Component {
         window.onfocus = () => {
             window.focused = true;
         };
-    }
-
-    setError = (type, error) => {
-        this.setState({ data: [], connected: false, error: `${error.toString()} | ${type}` });
-    }
-
-    /**
-    * `pointsToStore` is the number of stored data points
-    * - We need to cache more date than 20
-    * - This should be useful when implementing variable `x-ticks` in UI
-    */
-    storeReading = (reading) => {
-        console.log(reading);
-        this.setState((prevState) => {
-            const data = prevState.data;
-            const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
-
-            data.push(reading);
-
-            return {
-                data: data.slice(pointsToStore),
-                connected: true,
-                error: false,
-                lastTimestamp: new Date(data[data.length - 1].timestamp).toLocaleTimeString()
-            };
-        });
-
-        this.updateChart();
     }
 
     /**
@@ -163,24 +164,25 @@ export class Chart extends Component {
         this.tsChart.adjustAxes(data);
         this.tsChart.setSeriesData('sensor-data', data, false);
         this.tsChart.setSeriesData('anomaly', anomalyLine, false);
+        // this.tsChart.setSeriesData('prediction')
     }
-
 
     toggleSeries = ({ target }) => {
         target.classList.toggle('hidden');
         this.tsChart.toggleSeries(target.id);
     }
 
+    // Render Chart component
     render = () => (
         <div className="card" ref={this.wrapper}>
-            <div>
-                <ul>
-                    <li>{this.props.values['id']}</li>
-                    <li>{this.props.values['time']}</li>
-                    <li>{this.props.values['signal']}</li>
-                </ul>
-            </div>
-            <h2>{!this.state.lastTimestamp ? 'Connecting...' : `Sensor ${this.props.sensorId}`}</h2>
+            <div> {/* DELETE */}
+                <ul> {/* DELETE */}
+                    <li>{this.props.values['id']}</li> {/* DELETE */}
+                    <li>{this.props.values['time']}</li> {/* DELETE */}
+                    <li>{this.props.values['signal']}</li> {/* DELETE */}
+                </ul> {/* DELETE */}
+            </div> {/* DELETE */}
+            <h2>{!this.state.last_time_str ? 'Connecting...' : `${this.props.sensor_id.toUpperCase()}`}</h2>
 
             <span className={'status ' + (this.state.connected ? 'success' : 'danger')}>
                 {this.state.error}
@@ -207,7 +209,7 @@ export class Chart extends Component {
 
             <span className={'timestamp ' + (this.state.connected ? 'success' : 'danger')}>
                 {this.state.connected ? '' : 'Last reading was at '}
-                {this.state.lastTimestamp}
+                {this.state.last_time_str}
             </span>
 
         </div>

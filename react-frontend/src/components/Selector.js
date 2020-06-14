@@ -152,15 +152,8 @@ export class Selector extends React.Component {
         const selected = this.state.selected;
         const time = values.time;
         const id = values.id;
-        for(let sig of selected){
-            chart_items[sig] = this.add_chart(sig, sig, {'id': id, 'time': time, 'signal': values[sig]})
-                // chart_items[sig] = <Chart sensor_id={sig} key={sig} values={{'id': undefined,'signal': undefined,'time': undefined}}
-                // chart_items[key].props.time = values.time
-                // chart_items[key].props[key] = value
-        }
-            this.setState({
-                chart_items:chart_items
-            });
+        for(let sig of selected){chart_items[sig] = this.add_chart(sig, sig, {'id': id, 'time': time, 'signal': values[sig]})}
+            this.setState({chart_items:chart_items});
     }
 
     add_chart = (sensor, key, values) => {
