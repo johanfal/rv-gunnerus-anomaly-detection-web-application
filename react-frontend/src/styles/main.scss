@@ -24,6 +24,7 @@ body {
     font-weight: 400;
     text-align: center;
     margin: 15px;
+    margin-bottom: 40px;
   }
 
   >div>a {
@@ -125,9 +126,17 @@ div.dropdown-heading{
 }
 
 #link-container{
+  border-radius: 15px;
+  margin: auto;
+  width: 350px;
+  border: 1.5px solid white;
   text-align: center;
-  margin-top: 5px;
+  margin-top: 3px;
   margin-bottom: 30px;
+}
+
+#link-container:hover{
+  background-color: #1f4441;
 }
 
 a{
@@ -143,4 +152,11 @@ a:hover{
   span{
     margin-bottom: 2px !important;
   }
+}
+
+h4.repotitle {
+  margin-top: 10px;
+  margin-bottom: 0px;
+  font-size: 16px;
+  color: white;
 }

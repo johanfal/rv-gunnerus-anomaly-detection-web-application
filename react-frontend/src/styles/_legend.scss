@@ -29,7 +29,15 @@
     }
   }
 
-  .readings.hidden, .anomaly.hidden {
+  .prediction {
+    color: $orange-hex;
+
+    .box {
+      background-color: $orange-hex;
+    }
+  }
+
+  .readings.hidden, .anomaly.hidden, .prediction.hidden {
     color: $gray-hex;
     .box {
       background-color: $gray-hex;
