@@ -99,12 +99,12 @@ export class Chart extends Component {
         const timestamp = Date.parse(datetime);
         const time_str = datetime.toLocaleTimeString();
         var last_timestamp = null;
+        const data = prev_state.data;
         if(prev_state.data.length > 0){
             last_timestamp = prev_state.data[prev_state.data.length-1].timestamp
         }
 
         if(timestamp !== last_timestamp){
-            const data = prev_state.data;
             const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
             console.log(data)
             const new_values = {
@@ -115,13 +115,18 @@ export class Chart extends Component {
             // Need to replace 0 below with anomaly 1 or 0
             data.push(new_values);
 
-            // This is where you return the new state!
-            // Nearly there, great job fren
             return {data: data.slice(pointsToStore),
                     connected: true,
                     error: false,
                     last_time_str: time_str
                 }
+        } else{
+            return {
+                data: data,
+                connected: true,
+                error:false,
+                last_time_str: time_str
+            }
         }
     }
 
