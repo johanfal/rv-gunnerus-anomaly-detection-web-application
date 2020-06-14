@@ -61,6 +61,8 @@ class ValueThread(Thread):
                 socketio.emit('values', values)
                 time.sleep(self.delay)
                 self.index += 1
+        engine.dispose()
+        print('Engine disposed after threading')
 
     def run(self):
         self.get_data()
@@ -112,6 +114,7 @@ def on_connect():
 def disconnect():
     system_id = request.args.get('system')
     engine.dispose()
+    print('Engine disposed after disconnecting')
     print(f"Client '{system_id}' has been disconnected.")
 
 if __name__ == '__main__':
