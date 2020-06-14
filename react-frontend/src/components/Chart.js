@@ -21,9 +21,11 @@ export class Chart extends Component {
     constructor(props) {
         super(props)
 
+
         this.state = {
             data: [],
             last_time_str: null,
+            last_date_str: '',
             connected: false,
             error: '',
             status: null,
@@ -35,26 +37,26 @@ export class Chart extends Component {
                 type: 'LINE',
                 stroke: '#038C7E',
                 strokeWidth: 5,
-                label: 'Actual',
+                label: 'Reading',
                 labelClass: 'readings',
+            },
+            {
+                name: 'prediction',
+                type: 'LINE',
+                stroke: '#E67002',
+                strokeWidth: 3,
+                label: 'Prediction',
+                labelClass: 'prediction'
             },
             {
                 name: 'anomaly',
                 type: 'AREA',
-                fill: 'rgba(216, 13, 49, 0.2)',
+                fill: 'rgba(216, 13, 49, 0.35)',
                 stroke: 'transparent',
                 strokeWidth: 0,
                 label: 'Anomaly',
                 labelClass: 'anomaly',
-            },
-            // {
-            //     name: 'prediction',
-            //     type: 'LINE',
-            //     stroke: '#038C7E',
-            //     strokeWidth: 5,
-            //     label: 'Prediction',
-            //     labelClass: 'prediction'
-            // }
+            }
         ]
         this.tsChart = new D3TsChart();
         this.wrapper = createRef();
@@ -79,7 +81,7 @@ export class Chart extends Component {
 
             this.tsChart.addSeries(this.seriesList[0]); // readings
             this.tsChart.addSeries(this.seriesList[1]); // anomaly
-            // this.tsChart.addSeries(this.seriesList[2]); // prediction
+            this.tsChart.addSeries(this.seriesList[2]); // prediction
 
 
             this.attachFocusWatcher();
@@ -91,26 +93,39 @@ export class Chart extends Component {
 
         if(next_props.values.time === undefined){
             return {last_time_str: null,
+                    last_date_str: '',
                     connected: false,}
         }
         const values = next_props.values;
 
         const datetime = new Date(values.time);
         const timestamp = Date.parse(datetime);
-        const time_str = datetime.toLocaleTimeString();
-        var last_timestamp = null;
+        const date_str = datetime.toLocaleDateString('en-GB');
+        const time_str = datetime.toLocaleTimeString('en-GB');
+        var last_timestamp = '';
         const data = prev_state.data;
+        const pred = prev_state.pred;
         if(prev_state.data.length > 0){
             last_timestamp = prev_state.data[prev_state.data.length-1].timestamp
         }
 
         if(timestamp !== last_timestamp){
             const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
-            console.log(data)
-            const new_values = {
-                timestamp: timestamp,
-                value: values.signal,
-                anomaly: 0
+            const pred_value = values.signal + Math.floor(Math.random()*100)/100-0.5;
+            var new_values;
+            if(next_props.pred){
+                new_values = {
+                    timestamp: timestamp,
+                    value: values.signal,
+                    pred: pred_value,
+                    anomaly: Math.abs(pred_value-values.signal) > 0.25 ? 1 : 0
+                }
+            } else {
+                new_values = {
+                    timestamp: timestamp,
+                    value: values.signal,
+                    anomaly: Math.abs(pred_value-values.signal) > 0.25 ? 1 : 0
+                }
             }
             // Need to replace 0 below with anomaly 1 or 0
             data.push(new_values);
@@ -118,6 +133,7 @@ export class Chart extends Component {
             return {data: data.slice(pointsToStore),
                     connected: true,
                     error: false,
+                    last_date_str: date_str,
                     last_time_str: time_str
                 }
         } else{
@@ -125,6 +141,7 @@ export class Chart extends Component {
                 data: data,
                 connected: true,
                 error:false,
+                last_date_str: date_str,
                 last_time_str: time_str
             }
         }
@@ -163,13 +180,19 @@ export class Chart extends Component {
     updateChart() {
         const xTicks = Math.max(this.state.data.length - (this.props['x-ticks'] || DEFAULT_X_TICKS), 0);
         const data = this.state.data.slice(xTicks);
-        const highestValueInView = Math.max(...data.map(p => p.value));
+        var highestValueInView = Math.max(...data.map(p => p.value));
+        if(this.props.pred){
+            let highestPredInView = Math.max(...data.map(p => p.pred));
+            highestValueInView = Math.max(highestValueInView, highestPredInView)
+        }
         const anomalyLine = data.map(p => ({ timestamp: p.timestamp, value: p.anomaly ? highestValueInView : 0 }));
 
-        this.tsChart.adjustAxes(data);
+        this.tsChart.adjustAxes(data, this.props.pred);
         this.tsChart.setSeriesData('sensor-data', data, false);
         this.tsChart.setSeriesData('anomaly', anomalyLine, false);
-        // this.tsChart.setSeriesData('prediction')
+        if(this.props.pred){
+            this.tsChart.setSeriesData('prediction', data, false);
+        }
     }
 
     toggleSeries = ({ target }) => {
@@ -180,14 +203,7 @@ export class Chart extends Component {
     // Render Chart component
     render = () => (
         <div className="card" ref={this.wrapper}>
-            <div> {/* DELETE */}
-                <ul> {/* DELETE */}
-                    <li>{this.props.values['id']}</li> {/* DELETE */}
-                    <li>{this.props.values['time']}</li> {/* DELETE */}
-                    <li>{this.props.values['signal']}</li> {/* DELETE */}
-                </ul> {/* DELETE */}
-            </div> {/* DELETE */}
-            <h2>{!this.state.last_time_str ? 'Connecting...' : `${this.props.sensor_id.toUpperCase()}`}</h2>
+            <h2>{!this.state.last_time_str ? 'Connecting...' : `${this.props.sensor_id.toUpperCase()}: ${this.props.values.signal}`}</h2>
 
             <span className={'status ' + (this.state.connected ? 'success' : 'danger')}>
                 {this.state.error}
@@ -213,8 +229,8 @@ export class Chart extends Component {
             </div>
 
             <span className={'timestamp ' + (this.state.connected ? 'success' : 'danger')}>
-                {this.state.connected ? '' : 'Last reading was at '}
-                {this.state.last_time_str}
+                {(this.state.connected) ? '' : 'Last reading was at '}
+                {`${this.state.last_date_str} ${this.state.last_time_str}`}
             </span>
 
         </div>

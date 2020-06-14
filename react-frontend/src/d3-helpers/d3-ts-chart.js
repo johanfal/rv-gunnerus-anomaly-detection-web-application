@@ -12,7 +12,7 @@ export default class D3TsChart {
     group; // Inner box group without margins
 
     // Layout config
-    margin = { top: 10, right: 30, bottom: 30, left: 30 };
+    margin = { top: 10, right: 20, bottom: 30, left: 50 };
 
     outerWidth; outerHeight;
 
@@ -114,7 +114,11 @@ export default class D3TsChart {
                 break;
             case 'LINE':
             default:
-                this.updateLineSeries(series, data);
+                if(name == 'prediction'){
+                    this.updatePredictionSeries(series, data);
+                } else {
+                    this.updateLineSeries(series, data);
+                }
                 break;
         }
     }
@@ -126,6 +130,16 @@ export default class D3TsChart {
             .attr('d', d3.line()
                 .x((d) => { return this.xScale(d.timestamp); })
                 .y((d) => { return this.yScale(d.value); })
+            );
+    }
+
+    updatePredictionSeries(series, data) {
+        series.ref
+            .datum(data)
+            .transition().duration(TRANSITION_DURATION).ease(d3.easeQuadIn)
+            .attr('d', d3.line()
+                .x((d) => { return this.xScale(d.timestamp); })
+                .y((d) => { return this.yScale(d.pred); })
             );
     }
 
@@ -151,9 +165,20 @@ export default class D3TsChart {
     }
 
     // Helper functions
-    adjustAxes(data) {
-        const maxValue = d3.max(data, (d) => d.value);
-        const minValue = d3.min(data, (d) => d.value);
+    adjustAxes(data, pred_bool) {
+        var minValue, maxValue;
+        if(pred_bool){
+            let minActual = d3.min(data, (d) => d.value);
+            let minPred = d3.min(data, (d) => d.pred);
+            minValue = Math.floor(Math.min(minActual, minPred)*10)/10;
+
+            let maxActual = d3.max(data, (d) => d.value);
+            let maxPred = d3.max(data, (d) => d.pred);
+            maxValue = Math.ceil(Math.max(maxActual, maxPred)*10)/10;
+        } else {
+            maxValue = d3.max(data, (d) => d.value);
+            minValue = d3.min(data, (d) => d.value);
+        }
         this.xScale.domain(d3.extent(data, (d) => d.timestamp));
         this.xAxisRef
             .transition().duration(TRANSITION_DURATION).ease(d3.easeLinear)
@@ -165,7 +190,7 @@ export default class D3TsChart {
             .call(
                 d3.axisLeft(this.yScale)
                     .ticks(maxValue < MAX_Y_TICKS ? maxValue : MAX_Y_TICKS)
-                    .tickFormat(d3.format('d'))
+                    .tickFormat(d3.format('.1f'))
             );
     }
 
