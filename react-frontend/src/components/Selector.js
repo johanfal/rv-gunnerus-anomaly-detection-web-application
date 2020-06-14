@@ -60,11 +60,6 @@ export class Selector extends React.Component {
                                 })
             }
 
-            // Delete this?
-            for(let sig of selected){ // this will perhaps cause error due to lack of signal prop
-                chart_items[sig]= <Chart sensor_id={sig} key={sig}/>
-            }
-
             // Update mounted states
             this.setState({
                             options: this.options,
@@ -157,7 +152,7 @@ export class Selector extends React.Component {
     }
 
     add_chart = (sensor, key, values) => {
-        return <Chart sensor_id={sensor} key={key} values={values} />
+        return <Chart sensor_id={sensor} key={key} values={values} pred={true} />
     }
 
     set_updated_state = (selected_items) => {
