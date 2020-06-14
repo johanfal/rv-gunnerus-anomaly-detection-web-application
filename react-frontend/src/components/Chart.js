@@ -104,7 +104,6 @@ export class Chart extends Component {
         const time_str = datetime.toLocaleTimeString('en-GB');
         var last_timestamp = '';
         const data = prev_state.data;
-        const pred = prev_state.pred;
         if(prev_state.data.length > 0){
             last_timestamp = prev_state.data[prev_state.data.length-1].timestamp
         }

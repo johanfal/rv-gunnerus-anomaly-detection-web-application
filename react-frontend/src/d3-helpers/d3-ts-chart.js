@@ -114,7 +114,7 @@ export default class D3TsChart {
                 break;
             case 'LINE':
             default:
-                if(name == 'prediction'){
+                if(name === 'prediction'){
                     this.updatePredictionSeries(series, data);
                 } else {
                     this.updateLineSeries(series, data);

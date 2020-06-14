@@ -39,7 +39,6 @@ export class Selector extends React.Component {
 
     // Get list of signals
     signals = () => {
-        const selected = this.state.selected;
         let chart_items = this.state.chart_items;
 
         // API get-request
