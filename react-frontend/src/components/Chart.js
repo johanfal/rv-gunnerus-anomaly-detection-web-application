@@ -1,9 +1,9 @@
 import React, {createRef, Component } from 'react';
 
-import D3TsChart from '../d3-helpers/d3-ts-chart';
+import D3TsChart from './D3-Visuals';
 
 const MAX_POINTS_TO_STORE = 50;
-const DEFAULT_X_TICKS = 20;
+const DEFAULT_X_TICKS = 30;
 // const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 'connect_failed', 'error'];
 
 /**
