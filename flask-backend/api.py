@@ -1,11 +1,14 @@
 import time, random
 
-from threading import Thread, Event
 from flask import Flask, render_template, request, redirect, url_for
-import eventlet
 from flask_socketio import SocketIO, send, emit
-from sqlalchemy.orm import load_only
 from sqlalchemy import create_engine
+from sqlalchemy.orm import load_only
+from threading import Thread, Event
+import eventlet
+
+from tensorflow.keras.models import load_model
+import numpy as np
 
 from functions import *
 from models import *
@@ -35,10 +38,17 @@ db.init_app(app)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
 
-INTERVAL = 1 # update interval in seconds
+INTERVAL = 20 # update interval in seconds
 
 thread = Thread()
 thread_stop_event = Event()
+
+global model
+# model = load_model('sample_model.h5')
+# shape = model.input_shape
+# timesteps = model.input_shape[1]
+# n_input_columns = model.input_shape[2]
+
 
 class ValueThread(Thread):
     """Handles signal thread, which allows the dynamic relationship between
@@ -49,16 +59,52 @@ class ValueThread(Thread):
         """Instantiate class object."""
         self.delay = INTERVAL # frequency of updates
         self.index = 1 # initial index
+        self.X_pred = []
+        self.get_first_pred_values()
         super(ValueThread, self).__init__()
+
+    def get_first_pred_values(self):
+        timesteps = 30
+        for i in range(1,timesteps + 1):
+            values = MainEngines.query.get(i).get_dict()
+            pred_values = []
+            for key in MainEngines.__table__.columns.keys():
+                if key != 'id' and key != 'time':
+                    pred_values.append(values[key])
+            self.X_pred.append(pred_values)
+            del pred_values
+            print(self.X_pred[len(self.X_pred)-1])
+        self.X_pred = np.reshape()
+
 
     def get_data(self):
         """Continuously emit information about the current database index to
         the client, which fetches data based on the index."""
         while not thread_stop_event.is_set():
             with app.app_context():
-                values = MainEngines.query.options(load_only(*self.fields)).get(self.index).get_dict()
+                # values = MainEngines.query.options(load_only(*self.fields)).get(self.index)
+                # 'ME1_BackupBatt', 'ME1_Boostpress', 'ME1_EngineSpeed','ME1_ExhaustTemp1', 'ME1_ExhaustTemp2', 'ME1_FuelRate', 'ME1_Hours','ME1_LOPress', 'ME1_LubOilTemp', 'ME1_POWER', 'ME1_StartBatt','ME1_coolantTemp'
+                # Format: (rowNums, timesteps, signals)
+                pred_values = []
+                values = MainEngines.query.get(self.index).get_dict()
+                for key in MainEngines.__table__.columns.keys():
+                    if key != 'id' and key != 'time':
+                        pred_values.append(values[key])
+                print('Keys: ', MainEngines.__table__.columns.keys())
+                print(pred_values)
+                # Does (1,1,12) work?
                 values['time'] = str(values['time'])
                 socketio.emit('values', values)
+                pred_vals = values
+                del pred_vals['time']
+                counter = 1
+                for key, value in values.items():
+                    print(counter, key, value)
+                    counter += 1
+                # pred_vals = model.predict(values)
+                print('\n\nPred:')
+                # print(pred_vals)
+                print('\n\n')
                 time.sleep(self.delay)
                 self.index += 1
         engine.dispose()
@@ -96,6 +142,8 @@ def stop_thread():
         return {'thread_stopped': True}
     return {'thread_stopped': False}
 
+
+# SocketIO connect and disconnect events
 @socketio.on('connect')
 def on_connect():
     global thread
