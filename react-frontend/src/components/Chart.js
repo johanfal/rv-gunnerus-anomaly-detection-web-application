@@ -30,8 +30,7 @@ export class Chart extends Component {
             error: '',
             status: null,
         }
-
-        this.seriesList = [
+        this.props.pred ? this.seriesList = [
             {
                 name: 'sensor-data',
                 type: 'LINE',
@@ -57,6 +56,15 @@ export class Chart extends Component {
                 label: 'Anomaly',
                 labelClass: 'anomaly',
             }
+        ] : this.seriesList = [
+            {
+                name: 'sensor-data',
+                type: 'LINE',
+                stroke: '#038C7E',
+                strokeWidth: 5,
+                label: 'Reading',
+                labelClass: 'readings',
+            }
         ]
         this.tsChart = new D3TsChart();
         this.wrapper = createRef();
@@ -80,8 +88,10 @@ export class Chart extends Component {
         });
 
             this.tsChart.addSeries(this.seriesList[0]); // readings
-            this.tsChart.addSeries(this.seriesList[1]); // anomaly
-            this.tsChart.addSeries(this.seriesList[2]); // prediction
+            if(this.props.pred){
+                this.tsChart.addSeries(this.seriesList[1]); // anomaly
+                this.tsChart.addSeries(this.seriesList[2]); // prediction
+            }
 
 
             this.attachFocusWatcher();
@@ -117,13 +127,13 @@ export class Chart extends Component {
                     timestamp: timestamp,
                     value: values.signal,
                     pred: pred_value,
-                    anomaly: Math.abs(pred_value-values.signal) > 0.25 ? 1 : 0
+                    anomaly: Math.abs(pred_value-values.signal) > 0.2 ? 1 : 0
                 }
             } else {
                 new_values = {
                     timestamp: timestamp,
                     value: values.signal,
-                    anomaly: Math.abs(pred_value-values.signal) > 0.25 ? 1 : 0
+                    anomaly: Math.abs(pred_value-values.signal) > 0.2 ? 1 : 0
                 }
             }
             // Need to replace 0 below with anomaly 1 or 0
@@ -188,8 +198,8 @@ export class Chart extends Component {
 
         this.tsChart.adjustAxes(data, this.props.pred);
         this.tsChart.setSeriesData('sensor-data', data, false);
-        this.tsChart.setSeriesData('anomaly', anomalyLine, false);
         if(this.props.pred){
+        this.tsChart.setSeriesData('anomaly', anomalyLine, false);
             this.tsChart.setSeriesData('prediction', data, false);
         }
     }

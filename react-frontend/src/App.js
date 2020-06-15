@@ -13,9 +13,9 @@ function App() {
         GITHUB REPOSITORIES
       </h4>
       <span>
-        <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">[ Web Application ]</a>
+        <a href="https://www.github.com" target="_blank" rel="noopener noreferrer">[ Web Application ]</a>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">[ Modeling API ]</a>
+        <a href="https://www.github.com" target="_blank" rel="noopener noreferrer">[ Modeling API ]</a>
       </span>
       </div>
     </div>

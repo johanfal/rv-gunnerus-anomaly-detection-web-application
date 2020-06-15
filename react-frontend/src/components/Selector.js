@@ -151,7 +151,11 @@ export class Selector extends React.Component {
     }
 
     add_chart = (sensor, key, values) => {
-        return <Chart sensor_id={sensor} key={key} values={values} pred={true} />
+        var pred = false;
+        if (sensor === 'me1_exhausttemp1' || sensor === 'me1_exhausttemp2'){
+            pred = true;
+        }
+        return <Chart sensor_id={sensor} key={key} values={values} pred={pred} />
     }
 
     set_updated_state = (selected_items) => {
