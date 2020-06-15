@@ -121,8 +121,6 @@ export class Selector extends React.Component {
     add_new_charts = (newly_selected, selected_items) => {
         for(let sig of newly_selected){
             selected_items[sig] = this.add_chart(sig, sig, {'id': undefined, 'time': undefined, 'signal': undefined})
-            // selected_items[sig] = <Chart sensor_id={sig} key={sig} values={{'id': undefined,'signal': undefined,'time': undefined}}
-                            // />;
         }
         return selected_items;
     }
@@ -166,7 +164,7 @@ export class Selector extends React.Component {
         const selected = this.state.selected;
         const options = this.state.options;
         const chart_items = this.state.chart_items;
-
+        const no_signals = Object.keys(this.signals).length === 0;
         return (
         <div className="selector-chart-container">
             <div className="selector-container">
@@ -175,12 +173,12 @@ export class Selector extends React.Component {
                     selected={selected}
                     onSelectedChanged={selected => this.setState({selected})}
                     overrideStrings={{
-                        selectSomeItems: "Select signals..",
+                        selectSomeItems: no_signals ? "No signals found.." : "Select signals..",
                         allItemsAreSelected: "All signals selected",
                         selectAll: "Select all",
                         }}
                     disableSearch={true}
-                    isLoading={false}
+                    isLoading={no_signals ? true : false}
                 />
             </div>
             <div className="charts-container">
