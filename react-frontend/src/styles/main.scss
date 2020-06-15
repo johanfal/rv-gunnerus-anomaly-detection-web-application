@@ -159,3 +159,32 @@ h4.repotitle {
   font-size: 16px;
   color: white;
 }
+
+div.upload-container{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // color: white;
+  color: white;
+  text-align: center;
+  // border-radius: 5px;
+  // border: 1px dashed;
+}
+
+div.upload{
+  background-color:$green-hex !important;
+}
+
+div.upload:hover{
+  background-color: rgba(255, 255, 255, 0.061);
+  cursor: pointer;
+}
+
+a.sample-link{
+  text-decoration: underline;
+  font-style: italic;
+
+}
+a.sample-link:hover{
+  color:rgba(255, 255, 255, 0.712);
+}
