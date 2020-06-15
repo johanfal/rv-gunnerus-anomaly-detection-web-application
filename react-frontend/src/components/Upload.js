@@ -34,13 +34,13 @@ export const Upload = (props) => {
         isDragActive,
         isDragAccept,
         isDragReject
-      } = useDropzone({accept: '.h5, .keras'});
+      } = useDropzone({accept: 'h5/.h5'});
     
       const style = useMemo(() => ({
         ...baseStyle,
         ...(isDragActive ? activeStyle : {}),
         ...(isDragAccept ? acceptStyle : {}),
-        ...(isDragReject ? rejectStyle : {})
+        ...(isDragReject ? acceptStyle : {})
       }), [
         isDragActive,
         isDragReject,
