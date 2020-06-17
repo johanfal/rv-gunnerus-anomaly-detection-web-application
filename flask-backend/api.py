@@ -74,13 +74,14 @@ if False:
 def get_systems():
     """Return a list of systems based on the entry tables in the PostgreSQL
     database, which are instantiated through SQL Alchemy in 'models.py'."""
-    systems = {}
-    tables = engine.table_names()
-    for table in tables:
-        if not models[table].query.first():
-            systems[table] = False # if result is None (empty table)
-        else:
-            systems[table] = True # if result is not None (non-empty table)
+    # systems = {}
+    # tables = engine.table_names()
+    # for table in tables:
+    #     if not models[table].query.first():
+    #         systems[table] = False # if result is None (empty table)
+    #     else:
+    #         systems[table] = True # if result is not None (non-empty table)
+    systems = {'Nogva Engines': 'NogvaEngines'}
     return {'systems':systems} # return boolean dictionary with tables as keys
 
 @app.route('/signals/<system_table>', methods = ['GET', 'POST'])
@@ -94,7 +95,8 @@ def get_signals(system_table):
 
     # Get the name of each column of the selected system:
     for col in table_props:
-        signals.append(col['name'])
+        if 'me1' in col['name']:
+            signals.append(col['name'])
     return {'signals': signals}
 
 @app.route('/update_selected/<system_table>/<cols_str>', methods = ['GET', 'POST'])
@@ -172,7 +174,7 @@ class ValueThread(Thread):
                 for key in NogvaEngines.__table__.columns.keys():
                     if key != 'id' and key != 'time':
                         pred_values.append(values[key])
-                print('Keys: ', NogvaEngines.__table__.columns.keys())
+                # print('Keys: ', NogvaEngines.__table__.columns.keys())
                 print(pred_values)
                 # Does (1,1,12) work?
                 values['time'] = str(values['time'])
@@ -181,12 +183,12 @@ class ValueThread(Thread):
                 del pred_vals['time']
                 counter = 1
                 for key, value in values.items():
-                    print(counter, key, value)
+                    # print(counter, key, value)
                     counter += 1
                 # pred_vals = model.predict(values)
-                print('\n\nPred:')
+                # print('\n\nPred:')
                 # print(pred_vals)
-                print('\n\n')
+                # print('\n\n')
                 time.sleep(self.delay)
                 self.index += 1
         engine.dispose()
