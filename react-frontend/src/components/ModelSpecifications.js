@@ -6,12 +6,14 @@ export class ModelSpecifications extends React.Component {
         super(props);
         this.state = {
             options: [],
-            selected: [],
+            selected: ['Nogva Engines'],
+            selectedInputs: [],
+            selectedOutputs: [],
         }
-        this.selectedInputs = []
-        this.selectedOutputs = []
-        this.maxSelect = 1
-        this.type = 'system'
+        this.maxSelect = 1;
+        this.type = 'system';
+        this.onSelectedInput = this.onSelectedInput.bind(this);
+        this.onSelectedOutput = this.onSelectedOutput.bind(this);
     }
 
     componentDidMount(){
@@ -19,8 +21,6 @@ export class ModelSpecifications extends React.Component {
             let options = []
             let optionsEnabled = []
             let optionsDisabled = []
-            console.log(data.systems)
-            console.log('here')
             for(let [system, hasData] of Object.entries(data.systems)){
                 if(hasData){
                     optionsEnabled.push({
@@ -52,11 +52,24 @@ export class ModelSpecifications extends React.Component {
         }
     }
 
-    onSelectedIO = (selected) => {
+    onSelectedInput = (selected) => {
+        console.log('Input: ' + selected)
+        this.setState({selectedInputs: selected})
 
     }
     onSelectedOutput = (selected) => {
+        console.log('Output: ' + selected)
+        this.setState({selectedOutputs: selected})
+    }
 
+    onContinue = () => {
+        console.log('click')
+        const modelParameters = {
+            system: this.state.selected,
+            selectedInputs: this.state.selectedInputs,
+            selectedOutputs: this.state.selectedOutputs
+        }
+        this.props.sendModelParameters(modelParameters)
     }
 
     render() {
@@ -64,9 +77,12 @@ export class ModelSpecifications extends React.Component {
         const selected = this.state.selected;
         const type = this.type;
         const maxSelect = this.maxSelect;
-        const reachMaxed = selected.length === maxSelect;
+        const reachedSystemMax = selected.length === maxSelect;
+        const reachedInputMax = this.state.selectedInputs.length === this.props.inputSignals;
+        const reachedOutputMax = this.state.selectedOutputs.length === this.props.outputSignals;
+        const allowContinue = reachedOutputMax && reachedInputMax;
+        console.log(reachedInputMax, reachedOutputMax)
         const hasLoaded = options.length > 0
-        console.log(options, options.length < 1)
         return (
             <div className="system-selector-container">
                 <div className="mod-selector-container">
@@ -78,8 +94,8 @@ export class ModelSpecifications extends React.Component {
                         selected={selected}
                         onSelectedChanged={selected => this.onSelect(selected)}
                         overrideStrings={{
-                            selectSomeItems: hasLoaded ? `Select ${type}` : 'Loading, please wait..',
-                            allItemsAreSelected: `${selected}`,
+                            selectSomeItems: hasLoaded ? `Select ${type}` : 'Loading systems from database, please wait..',
+                            allItemsAreSelected: `${maxSelect > 1 ? `All ${type}s selected`: selected}`,
                             }}
                         hasSelectAll={maxSelect > 1 ? true : false}
                         disableSearch={false}
@@ -87,18 +103,31 @@ export class ModelSpecifications extends React.Component {
                     />
                 </div>
                 <div className="io-selector-container">
-                    {reachMaxed ? <ShapeSpecifications
+                    {reachedSystemMax ? <ShapeSpecifications
                         system={selected}
                         type="input"
                         maxSelect={this.props.inputSignals}
-                        onSelectedInput={this.handleInput}
+                        sendUpdate={this.onSelectedInput}
                     /> : null}
-                    {reachMaxed ? <ShapeSpecifications
+                    {reachedSystemMax ? <ShapeSpecifications
                         system={selected}
                         type="output"
                         maxSelect={this.props.outputSignals}
-                        onSelectedOutput={this.handleOutput}
+                        sendUpdate={this.onSelectedOutput}
                     /> : null}
+                    <div className="continue-with-IO">
+                        {reachedSystemMax ?
+                            <button
+                            id="continue-with-IO"
+                            ref={contBtn => {this.contBtn = contBtn;}}
+                            disabled={!allowContinue}
+                            onClick={this.onContinue}
+                            type="submit"
+                            >
+                            <span id="cont-btn">Continue</span>
+                        </button> : null
+                        }
+                    </div>
                 </div>
             </div>
         )
@@ -144,7 +173,7 @@ class ShapeSpecifications extends React.Component {
         super(props);
         this.state = {
             options: [],
-            selected: []
+            selected: ['me1_exhausttemp2']
         }
         this.SIGNAL_MAX = 20; // set to prevent exceeding server capabilities
 
@@ -161,7 +190,6 @@ class ShapeSpecifications extends React.Component {
                     })
                 }
             }
-            console.log(options)
             this.setState({options: options})
             }
         ))
@@ -179,6 +207,7 @@ class ShapeSpecifications extends React.Component {
         }
         else{
             this.setState({selected})
+            this.props.sendUpdate(selected);
         }
     }
 
@@ -193,18 +222,18 @@ class ShapeSpecifications extends React.Component {
         return (
             <div className="mod-selector-container">
                 <div className="mod-spec-text">
-                    Select the {typeStr} signals used in prediction model ({selected.length} of {maxSelect} selected):
+                    Select the {typeStr} signals used by your ML model ({selected.length} of {maxSelect} selected):
                 </div>
                 <MultiSelect className="model_selector" id={this.props.type}
                     options={options}
                     selected={selected}
                     onSelectedChanged={selected => this.onSelect(selected)}
                     overrideStrings={{
-                        selectSomeItems: `Select ${typeStr} signals used in prediction model..`,
-                        allItemsAreSelected: `${selected}`,
+                        selectSomeItems: `Select ${typeStr} signals used by your ML model..`,
+                        allItemsAreSelected: `${maxSelect > 1 ? `All ${type} signals selected`: selected}`,
                         }}
                     hasSelectAll={maxSelect > 1 ? true : false}
-                    disableSearch={true}
+                    disableSearch={false}
                     isLoading={hasLoaded ? false : true}
                 />
             </div>
