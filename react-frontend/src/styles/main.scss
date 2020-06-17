@@ -5,6 +5,7 @@ sans-serif;
 @import './d3-chart';
 @import './pulse';
 @import './legend';
+@import './startpage';
 
 body {
   margin: 0;
@@ -158,121 +159,4 @@ h4.repotitle {
   margin-bottom: 0px;
   font-size: 16px;
   color: white;
-}
-
-#upload-content{
-  display: inline-block;
-  width: 100%;
-  align-items: center;
-  text-align: center;
-  overflow: hidden;
-}
-
-div.upload-container{
-  display: inline-block;
-  color: white;
-  width: 300;
-  padding:0px;
-  margin:0px;
-}
-
-div.upload{
-  background-color:#4b7e7991;
-  width:200px;
-  padding:0px;
-  margin:0px;
-}
-
-div.upload:hover{
-  cursor: pointer;
-  background-color:#66948f91;
-}
-
-a.sample-link{
-  text-decoration: underline;
-  font-style: italic;
-
-}
-a.sample-link:hover{
-  color:rgba(211, 211, 211, 0.8);
-  cursor: pointer;
-}
-
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type=number] {
-    -moz-appearance:textfield; /* Firefox */
-}
-
-.threshold-form-container{
-  color:white;
-  align-items:center;
-  display: flex;
-  justify-content: center;
-}
-
-div.question-container{
-  font-size:12px;
-  width:8px;
-  padding: 1px 3px 5px 3px;
-  text-align: center;
-  align-items: center;
-  height: 8px;
-  border: 1px solid;
-  border-radius: 8px;
-  color: white;
-
-}
-div.question-container:hover{
-  background-color: rgba(255, 255, 255, 0.164);
-  cursor: pointer;
-  .tooltip-container{
-    visibility: visible;
-  }
-  .tooltiptext{
-    visibility: visible;
-  }
-}
-
-a.question-tooltip{
-  text-decoration: none;
-}
-
-div.tooltip-container{
-  visibility:hidden;
-  position: relative;
-  display: inline-block;
-  cursor: auto;
-}
-
-span.tooltiptext{
-  font-size:16px;
-  visibility: hidden;
-  width: 350px;
-  background-color: rgba(42, 42, 42, 0.5);
-  color: white;
-  text-align: justify;
-  padding: 10px;
-  border-radius: 6px;
-  position: absolute;
-  // z-index: 1;
-}
-
-div.system-selector-container{
-  margin: 50px;
-}
-
-
-div.io-selector-container{
-  margin-top: 50px;
-  margin-bottom: 350px;
-}
-div.mod-spec-text{
-  color:white;
-  font-size: 18px;
-  margin: 20px 5px 15px 5px;
 }
