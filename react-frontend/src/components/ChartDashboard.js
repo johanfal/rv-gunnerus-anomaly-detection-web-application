@@ -1,12 +1,12 @@
 import React from 'react';
 import MultiSelect from "@khanacademy/react-multi-select";
-import Chart from '../components/Chart';
+import Chart from './Chart';
 import io from 'socket.io-client';
 
 // You are struggling to update index within the compDidUpdate function.
 // Is there a better way to do this?
 
-export class Selector extends React.Component {
+export class ChartDashboard extends React.Component {
     constructor(props){
         super(props);
         this.state = {
@@ -44,7 +44,7 @@ export class Selector extends React.Component {
         // API get-request
         fetch('signals').then(response => response.json().then(data => {
             this.signals = data.signals;
-            this.options = []
+            this.options = [] // Is this needed?
 
             // Filter out 'id' and 'time' from list of possible signals
             this.signals = this.signals.filter(e => e !== 'id' && e !== 'time')
@@ -134,7 +134,7 @@ export class Selector extends React.Component {
 
     get_values = (selected) => {
         if(selected.length > 0){
-            fetch(`/timestamp_values/${selected.join()}`)
+            fetch(`/update_selected/${selected.join()}`)
             this.socket.on('values', this.store_reading);
         }
     }
@@ -189,4 +189,4 @@ export class Selector extends React.Component {
     }
 }
 
-export default Selector;
+export default ChartDashboard;
