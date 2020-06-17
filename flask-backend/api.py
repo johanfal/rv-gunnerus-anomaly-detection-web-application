@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import load_only
 from threading import Thread, Event
 import eventlet
+from tensorflow.keras.models import load_model
 import numpy as np
 
 from models import *
@@ -45,10 +46,29 @@ thread = Thread() # define thread object
 thread_stop_event = Event() # define event used for stopping thread
 
 # Global variables:
-global models
+global timesteps, X_pred, X_tran, n_input_columns, keras_model, scaler, models
 
 # Get dict of all model classes with table names as key, as defined in models.py:
 models = get_models()
+
+# Load sample Keras model (input shape: (n, 30, 12), output shape: (1,2)):
+if False:
+    keras_model = load_model('sample_model.h5')
+    timesteps = keras_model.input_shape[1] # timesteps used in model
+    n_input_columns = keras_model.input_shape[2] # number of input columns
+    n_output_columns = keras_model.output_shape[1] # number of predicted columns
+    # Load sample scaler:
+    with open('sample_scaler.pckl', 'rb') as f:
+        # Get scaler from pickled transformed data from API modeling:
+        try: scaler = pickle.load(f)[0]
+        # Get stand-alone scaler:
+        except: scaler = pickle.load(f)
+
+    # Retrieve the first t values to use for prediction, where t is the trained timesteps:
+    X_pred = get_first_pred_values(timesteps, n_input_columns) # shape: (t, n)
+    # Transform data from scaler:
+    X_tran = np.array([scaler.transform(X_pred)]) # shape: (1, t, n)
+    pred_values_tran = keras_model.predict(X_tran) # first prediction
 
 @app.route('/systems', methods = ['GET', 'POST'])
 def get_systems():
@@ -134,7 +154,7 @@ class ValueThread(Thread):
     def __init__(self):
         """Instantiate class object."""
         self.delay = INTERVAL # frequency of updates
-        self.index = 1 # initial index
+        self.index = timesteps+1 # initial index
         self.X_pred = []
         self.get_first_pred_values()
         super(ValueThread, self).__init__()
@@ -147,16 +167,26 @@ class ValueThread(Thread):
                 # values = NogvaEngines.query.options(load_only(*self.fields)).get(self.index)
                 # 'ME1_BackupBatt', 'ME1_Boostpress', 'ME1_EngineSpeed','ME1_ExhaustTemp1', 'ME1_ExhaustTemp2', 'ME1_FuelRate', 'ME1_Hours','ME1_LOPress', 'ME1_LubOilTemp', 'ME1_POWER', 'ME1_StartBatt','ME1_coolantTemp'
                 # Format: (rowNums, timesteps, signals)
+                pred_values = []
                 values = db.session.query(self.system).get(self.index).get_dict()
                 for key in NogvaEngines.__table__.columns.keys():
                     if key != 'id' and key != 'time':
-                        print('Keys: ', NogvaEngines.__table__.columns.keys())
+                        pred_values.append(values[key])
+                print('Keys: ', NogvaEngines.__table__.columns.keys())
+                print(pred_values)
+                # Does (1,1,12) work?
                 values['time'] = str(values['time'])
                 socketio.emit('values', values)
+                pred_vals = values
+                del pred_vals['time']
                 counter = 1
                 for key, value in values.items():
                     print(counter, key, value)
                     counter += 1
+                # pred_vals = model.predict(values)
+                print('\n\nPred:')
+                # print(pred_vals)
+                print('\n\n')
                 time.sleep(self.delay)
                 self.index += 1
         engine.dispose()
@@ -164,6 +194,21 @@ class ValueThread(Thread):
 
     def run(self):
         self.get_data()
+
+def get_first_pred_values(timesteps, n_input_columns):
+    with app.app_context():
+        X_pred = [] # Placeholder for each timestep of signal values
+        for i in range(1,timesteps + 1):
+            values = NogvaEngines.query.get(i).get_dict()
+            # Set first and second column to id and time, respectively:
+            pred_values = []
+            for key in NogvaEngines.__table__.columns.keys():
+                if key != 'id' and key != 'time':
+                    # Append current signal to values at current timestep:
+                    pred_values.append(values[key])
+            X_pred.append(pred_values) # append timestep values to total list
+        return np.array(X_pred)
+        # return np.reshape(X_pred, (1,timesteps,n_input_columns))
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
