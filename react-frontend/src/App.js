@@ -9,7 +9,7 @@ function App() {
   return (
   <div className="content">
     <div id="maincontent">
-      {/* <Header /> */}
+      <Header />
       <Startpage />
       {/* <ChartDashboard system='MainEngine1'/> */}
     </div>
