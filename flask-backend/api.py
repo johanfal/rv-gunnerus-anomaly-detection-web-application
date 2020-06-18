@@ -1,15 +1,20 @@
-import time, random, pickle, os
+import os
+import glob
+import pickle
+import random
+import time
+from threading import Event, Thread
 
-from flask import Flask, render_template, request, redirect, url_for
-from flask_socketio import SocketIO, send, emit
+import eventlet
+import numpy as np
+from flask import Flask, redirect, render_template, request, url_for
+from flask_socketio import SocketIO, emit, send
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import load_only
-from threading import Thread, Event
-import eventlet
 from tensorflow.keras.models import load_model
-import numpy as np
 
 from models import *
+from werkzeug.utils import secure_filename
 
 # Instantiate Flask application
 app = Flask(__name__)
@@ -26,6 +31,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://dzetpohgmhykyo:224b34d1' \
                                         '15c7fa9cc3d712a9a909c7@ec2-34-225-' \
                                         '162-157.compute-1.amazonaws.com:54' \
                                         '32/d8s9d5jbimqmeo'
+
+uploads_dir = os.path.join(app.instance_path, 'uploads')
+os.makedirs(uploads_dir, exist_ok=True)
+
+# files = os.listdir(uploads_dir)
+# for f in files:
+    # os.remove(os.path.join(uploads_dir,f))
+
+# for f in files:
+#     os.remove(f)
+# UPLOAD_FOLDER = 'flask-backend'
+# ALLOWED_EXTENSIONS = set(['h5', 'hdf5', 'pckl'])
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 
 # Prevent unnecessary console warning:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -124,6 +143,36 @@ def stop_thread():
         return {'thread_stopped': True}
     engine.dispose()
     return {'thread_stopped': False}
+
+@app.route('/keras_model', methods=['GET','POST'])
+def save_uploaded_model():
+    """Receives uploaded Keras model file from frontend client."""
+    file = request.files['file']
+    model_path = os.path.join(uploads_dir, secure_filename(file.filename))
+    file.save(model_path)
+    model = load_model(model_path)
+    return {'fileprops' : {
+        'inp': model.input_shape[2],
+        'out': model.output_shape[1],
+        'timesteps': model.input_shape[1]
+    }}
+
+@app.route('/scaler', methods=['GET','POST'])
+def save_uploaded_scaler():
+    """Receives uploaded sklearn scaler file from frontend client."""
+    file = request.files['file']
+    scaler_path = os.path.join(uploads_dir, secure_filename(file.filename))
+    file.save(scaler_path)
+    print("succesfully saved to " + scaler_path + "..")
+    with open(scaler_path, 'rb') as f:
+        try: scaler = pickle.load(f)[0]
+        except: scaler = pickle.load(f)
+    print(type(scaler))
+    return {'fileprops' : {
+        'type': str(scaler),
+        'features': scaler.n_features_in_,
+        'samples': scaler.n_samples_seen_
+    }}
 
 @socketio.on('connect')
 def on_connect():
