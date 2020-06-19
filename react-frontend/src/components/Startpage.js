@@ -2,6 +2,7 @@ import React from "react";
 import "../styles/main.scss";
 import Upload from "./Upload";
 import ModelSpecifications from "./ModelSpecifications";
+import ChartDashboard from "./ChartDashboard";
 
 export class Startpage extends React.Component {
   constructor(props) {
@@ -24,6 +25,9 @@ export class Startpage extends React.Component {
 
     this.onModelComplete = this.onModelComplete.bind(this);
     this.onFileUploaded = this.onFileUploaded.bind(this);
+    this.onInputsUpdate = this.onInputsUpdate.bind(this);
+    this.onOutputsUpdate = this.onOutputsUpdate.bind(this);
+    this.onSystemUpdate = this.onSystemUpdate.bind(this);
   }
 
   onModelComplete = (modelParameters) => {
@@ -97,11 +101,27 @@ export class Startpage extends React.Component {
     }
   };
 
+  onSystemUpdate = (selectedSystem) => {
+    this.setState({ selectedSystem: selectedSystem });
+  };
+
+  onInputsUpdate = (selectedInputs) => {
+    this.setState({ selectedInputs: selectedInputs });
+  };
+
+  onOutputsUpdate = (selectedOutputs) => {
+    this.setState({ selectedOutputs: selectedOutputs });
+  };
+
   render() {
     const showSelectionParameters = this.checkFileUploades();
+    const settingsComplete = this.state.settingsComplete;
+    const useSampleFiles = this.state.useSampleFiles;
+    const modelProperties = this.state.modelProperties;
+    const system = this.state.system;
     return (
       <div className="startpage">
-        {!this.state.settingsComplete ? (
+        {!settingsComplete ? (
           [
             <div>
               <div id="upload-content">
@@ -109,24 +129,33 @@ export class Startpage extends React.Component {
                   id="keras-model"
                   name="Keras model"
                   format=".HDF5,.h5"
-                  sendFilename={this.onFileUploaded}
-                  useSampleFiles={this.state.useSampleFiles}
-                  resetProps={this.resetUploadStates}
-                  sendModelProperties={this.onModelProperties}
+                  sendFilename={(filename, id) =>
+                    this.onFileUploaded(filename, id)
+                  }
+                  useSampleFiles={useSampleFiles}
+                  resetProps={(id) => this.resetUploadStates(id)}
+                  sendModelProperties={(modelProps) =>
+                    this.onModelProperties(modelProps)
+                  }
                 />
                 <Upload
                   id="scaler"
                   name="scaler"
                   format=".pckl"
-                  sendFilename={this.onFileUploaded}
-                  useSampleFiles={this.state.useSampleFiles}
-                  resetProps={this.resetUploadStates}
+                  sendFilename={(filename, id) =>
+                    this.onFileUploaded(filename, id)
+                  }
+                  useSampleFiles={useSampleFiles}
+                  resetProps={(id) => this.resetUploadStates(id)}
                 />
               </div>
               <div>
                 <p style={{ textAlign: "center", color: "white" }}>
                   Or use&nbsp;
-                  <a className="sample-link" onClick={this.setSampleBool}>
+                  <a
+                    className="sample-link"
+                    onClick={() => this.setSampleBool()}
+                  >
                     sample model and scaler
                   </a>
                 </p>
@@ -145,17 +174,28 @@ export class Startpage extends React.Component {
               <div className="model-selectors-container">
                 {showSelectionParameters ? (
                   <ModelSpecifications
-                    inputSignals={this.state.modelProperties.inp}
-                    outputSignals={this.state.modelProperties.out}
-                    sendModelParameters={this.onModelComplete}
-                    useSampleFiles={this.state.useSampleFiles}
+                    inputSignals={modelProperties.inp}
+                    outputSignals={modelProperties.out}
+                    sendModelParameters={(modelParameters) =>
+                      this.onModelComplete(modelParameters)
+                    }
+                    sendSystemUpdate={(selectedSystem) =>
+                      this.onSystemUpdate(selectedSystem)
+                    }
+                    sendInputsUpdate={(selectedInputs) =>
+                      this.onInputsUpdate(selectedInputs)
+                    }
+                    sendOutputsUpdate={(selectedOutputs) =>
+                      this.onOutputsUpdate(selectedOutputs)
+                    }
+                    useSampleFiles={useSampleFiles}
                   />
                 ) : null}
               </div>
             </div>,
           ]
         ) : (
-          <div>Anomaly detection</div>
+          <ChartDashboard system={system} />
         )}
       </div>
     );

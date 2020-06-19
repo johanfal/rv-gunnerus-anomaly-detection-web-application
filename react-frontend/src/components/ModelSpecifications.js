@@ -12,6 +12,7 @@ export class ModelSpecifications extends React.Component {
         selectedInputs: [],
         selectedOutputs: [],
       };
+      this.props.sendSystemUpdate(this.state.selected);
     } else {
       this.state = {
         options: [],
@@ -21,7 +22,6 @@ export class ModelSpecifications extends React.Component {
       };
     }
     this.maxSelect = 1;
-    this.type = "system";
     this.onSelectedInput = this.onSelectedInput.bind(this);
     this.onSelectedOutput = this.onSelectedOutput.bind(this);
   }
@@ -55,19 +55,21 @@ export class ModelSpecifications extends React.Component {
 
   onSelect = (selected) => {
     const maxSelect = this.maxSelect;
-    const type = this.type;
     if (selected.length > maxSelect) {
-      alert(`You can only select ${maxSelect} ${type}.`);
+      alert(`You can only select ${maxSelect} system.`);
     } else {
       this.setState({ selected });
+      this.props.sendSystemUpdate(selected);
     }
   };
 
-  onSelectedInput = (selected) => {
-    this.setState({ selectedInputs: selected });
+  onSelectedInput = (selectedInputs) => {
+    this.setState({ selectedInputs: selectedInputs });
+    this.props.sendInputsUpdate(selectedInputs);
   };
-  onSelectedOutput = (selected) => {
-    this.setState({ selectedOutputs: selected });
+  onSelectedOutput = (selectedOutputs) => {
+    this.setState({ selectedOutputs: selectedOutputs });
+    this.props.sendOutputsUpdate(selectedOutputs);
   };
 
   onContinue = () => {
@@ -82,15 +84,15 @@ export class ModelSpecifications extends React.Component {
   render() {
     const options = this.state.options;
     const selected = this.state.selected;
-    const type = this.type;
+    const system = this.props.system;
     const maxSelect = this.maxSelect;
     const reachedSystemMax = selected.length === maxSelect;
     const reachedInputMax =
       this.state.selectedInputs.length === this.props.inputSignals;
     const reachedOutputMax =
       this.state.selectedOutputs.length === this.props.outputSignals;
-    const allowContinue = reachedOutputMax && reachedInputMax;
     const hasLoaded = options.length > 0;
+    const allowContinue = reachedOutputMax && reachedInputMax && hasLoaded;
     const useSampleFiles = this.props.useSampleFiles;
     const inputSignals = this.props.inputSignals;
     const outputSignals = this.props.outputSignals;
@@ -105,16 +107,15 @@ export class ModelSpecifications extends React.Component {
           </div>
           <MultiSelect
             className="model_selector"
-            id={this.props.type}
             options={options}
             selected={hasLoaded ? selected : []}
             onSelectedChanged={(selected) => this.onSelect(selected)}
             overrideStrings={{
               selectSomeItems: hasLoaded
-                ? `Select ${type}`
+                ? "Select system"
                 : "Loading systems from database, please wait..",
               allItemsAreSelected: `${
-                maxSelect > 1 ? `All ${type}s selected` : selected
+                maxSelect > 1 ? "All systems selected" : selected
               }`,
             }}
             hasSelectAll={maxSelect > 1 ? true : false}
@@ -149,7 +150,7 @@ export class ModelSpecifications extends React.Component {
                   this.contBtn = contBtn;
                 }}
                 disabled={!allowContinue}
-                onClick={this.onContinue}
+                onClick={() => this.onContinue()}
                 type="submit"
               >
                 <span id="cont-btn">Continue</span>
@@ -239,7 +240,8 @@ class ShapeSpecifications extends React.Component {
         );
       } else if (selected.length > signalMax) {
         alert(
-          `The maximum number of signals is set to ${signalMax} to preserve server capabilities.`
+          `The maximum number of signals is set to ${signalMax} to ` +
+            `preserve server capabilities.`
         );
       } else {
         this.setState({ selected });
@@ -262,8 +264,10 @@ class ShapeSpecifications extends React.Component {
       <div className="mod-selector-container">
         <div className="mod-spec-text">
           {useSampleFiles
-            ? `${typeStrTitle} signals used sample model (${selected.length} in total):`
-            : `Select the ${typeStr} signals used by your ML model (${selected.length} of ${maxSelect} selected):`}
+            ? `${typeStrTitle} signals used in sample model ` +
+              `(${selected.length} in total):`
+            : `Select the ${typeStr} signals used by your ML ` +
+              `model (${selected.length} of ${maxSelect} selected):`}
         </div>
         <MultiSelect
           className="model_selector"
@@ -273,7 +277,7 @@ class ShapeSpecifications extends React.Component {
           onSelectedChanged={(selected) => this.onSelect(selected)}
           overrideStrings={{
             selectSomeItems: hasLoaded
-              ? `Select ${typeStr} signals used by your ML model..`
+              ? `Select ${typeStr} signals used by your ML model`
               : `Loading ${type} signals from ${system}, please wait..`,
             allItemsAreSelected: `${
               maxSelect > 1 ? `All ${type} signals selected` : selected
