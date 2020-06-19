@@ -1,3 +1,6 @@
+from werkzeug.utils import secure_filename
+from models import *
+from tensorflow.keras.models import load_model
 import os
 import glob
 import pickle
@@ -11,14 +14,12 @@ from flask import Flask, redirect, render_template, request, url_for
 from flask_socketio import SocketIO, emit, send
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import load_only
-from tensorflow.keras.models import load_model
-from models import *
-from werkzeug.utils import secure_filename
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # remove
 
 # Instantiate Flask application
 app = Flask(__name__)
 
-eventlet.monkey_patch() # ensure appropriate threading behavior
+eventlet.monkey_patch()  # ensure appropriate threading behavior
 
 # Add secret key
 app.secret_key = "b'\xb14AG\xab\xd8\x14\xb6^h\x05\xba@\xce 6'"
@@ -48,38 +49,44 @@ db.init_app(app)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*")
 
-INTERVAL = 1 # fetch interval from database in seconds (data frequency)
+INTERVAL = 1  # fetch interval from database in seconds (data frequency)
 
-thread = Thread() # define thread object
-thread_stop_event = Event() # define event used for stopping thread
+thread = Thread()  # define thread object
+thread_stop_event = Event()  # define event used for stopping thread
 
 # Global variables:
 global timesteps, X_pred, X_tran, n_input_columns, uploaded_keras_model, uploaded_scaler, sample_keras_model, sample_scaler, models
 
-# Get dict of all model classes with table names as key, as defined in models.py:
+# Get dict of all model classes with table names as key, as defined in
+# models.py:
 models = get_models()
 
 # Load sample Keras model (input shape: (n, 30, 12), output shape: (1,2)):
 if False:
     keras_model = load_model('instance/samples/sample_model.h5')
     print(keras_model)
-    timesteps = keras_model.input_shape[1] # timesteps used in model
-    n_input_columns = keras_model.input_shape[2] # number of input columns
-    n_output_columns = keras_model.output_shape[1] # number of predicted columns
+    timesteps = keras_model.input_shape[1]  # timesteps used in model
+    n_input_columns = keras_model.input_shape[2]  # number of input columns
+    # number of predicted columns
+    n_output_columns = keras_model.output_shape[1]
     # Load sample scaler:
     with open('sample_scaler.pckl', 'rb') as f:
         # Get scaler from pickled transformed data from API modeling:
-        try: scaler = pickle.load(f)[0]
+        try:
+            scaler = pickle.load(f)[0]
         # Get stand-alone scaler:
-        except: scaler = pickle.load(f)
+        except BaseException:
+            scaler = pickle.load(f)
 
-    # Retrieve the first t values to use for prediction, where t is the trained timesteps:
-    X_pred = get_first_pred_values(timesteps, n_input_columns) # shape: (t, n)
+    # Retrieve the first t values to use for prediction, where t is the
+    # trained timesteps:
+    X_pred = get_first_pred_values(timesteps, n_input_columns)  # shape: (t, n)
     # Transform data from scaler:
-    X_tran = np.array([scaler.transform(X_pred)]) # shape: (1, t, n)
-    pred_values_tran = keras_model.predict(X_tran) # first prediction
+    X_tran = np.array([scaler.transform(X_pred)])  # shape: (1, t, n)
+    pred_values_tran = keras_model.predict(X_tran)  # first prediction
 
-@app.route('/systems', methods = ['GET', 'POST'])
+
+@app.route('/systems', methods=['GET', 'POST'])
 def get_systems():
     """Return a list of systems based on the entry tables in the PostgreSQL
     database, which are instantiated through SQL Alchemy in 'models.py'."""
@@ -87,12 +94,14 @@ def get_systems():
     tables = engine.table_names()
     for table in tables:
         if not models[table].query.first():
-            systems[table] = False # if result is None (empty table)
+            systems[table] = False  # if result is None (empty table)
         else:
-            systems[table] = True # if result is not None (non-empty table)
-    return {'systems':systems} # return boolean dictionary with tables as keys
+            systems[table] = True  # if result is not None (non-empty table)
+    # return boolean dictionary with tables as keys
+    return {'systems': systems}
 
-@app.route('/signals/<system_table>', methods = ['GET', 'POST'])
+
+@app.route('/signals/<system_table>', methods=['GET', 'POST'])
 def get_signals(system_table):
     """Return a list of signals based on the entry table in the PostgreSQL
     database, which is instantiated through SQL Alchemy in 'models.py'. The
@@ -106,20 +115,23 @@ def get_signals(system_table):
         signals.append(col['name'])
     return {'signals': signals}
 
-@app.route('/update_selected/<system_table>/<cols_str>', methods = ['GET', 'POST'])
+
+@app.route('/update_selected/<system_table>/<cols_str>',
+           methods=['GET', 'POST'])
 def get_values(system_table, cols_str):
     """Updates fields and starts separate thread if no thread is alive."""
-    columns = cols_str.split(',') # create a list from columns string
+    columns = cols_str.split(',')  # create a list from columns string
     fields = ['time']
     fields.extend(columns)
     thread.fields = fields
     thread.system = system_table
     if not thread.is_alive():
         thread.start()
-    return {'thread_alive':True}
+    return {'thread_alive': True}
     # return values.get_dict()
 
-@app.route('/reload', methods = ['GET'])
+
+@app.route('/reload', methods=['GET'])
 def stop_thread():
     """If the client window is reloaded and a thread is active in the
     background, this function discontinues the thread, meaning that upon
@@ -132,7 +144,8 @@ def stop_thread():
     engine.dispose()
     return {'thread_stopped': False}
 
-@app.route('/keras_model/<use_sample>', methods=['GET','POST'])
+
+@app.route('/keras_model/<use_sample>', methods=['GET', 'POST'])
 def save_uploaded_model(use_sample):
     """Receives uploaded Keras model file from frontend client."""
     if use_sample == 'true':
@@ -143,48 +156,58 @@ def save_uploaded_model(use_sample):
         model_path = os.path.join(UPLOADS_DIR, secure_filename(file.filename))
         file.save(model_path)
         print(f"succesfully saved model to '{model_path}'")
-        try: keras_model = load_model(model_path)
-        except: fileprops = False
-    try: fileprops = {
-                        'inp': keras_model.input_shape[2],
-                        'out': keras_model.output_shape[1],
-                        'timesteps': keras_model.input_shape[1]
-                }
-    except: fileprops = False
-    return {'fileprops' : fileprops}
+        try:
+            keras_model = load_model(model_path)
+        except BaseException:
+            fileprops = False
+    try:
+        fileprops = {
+            'inp': keras_model.input_shape[2],
+            'out': keras_model.output_shape[1],
+            'timesteps': keras_model.input_shape[1]
+        }
+    except BaseException:
+        fileprops = False
+    return {'fileprops': fileprops}
 
-@app.route('/scaler/<use_sample>', methods=['GET','POST'])
+
+@app.route('/scaler/<use_sample>', methods=['GET', 'POST'])
 def save_uploaded_scaler(use_sample):
     """Receives uploaded sklearn scaler file from frontend client."""
     if use_sample == 'true':
-        sample_scaler_path = os.path.join(SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
+        sample_scaler_path = os.path.join(
+            SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
         with open(sample_scaler_path, 'rb') as f:
             sample_scaler = pickle.load(f)[0]
             fileprops = {
-                            'type': str(sample_scaler),
-                            'features': sample_scaler.n_features_in_,
-                            'samples': sample_scaler.n_samples_seen_
-                    }
+                'type': str(sample_scaler),
+                'features': sample_scaler.n_features_in_,
+                'samples': sample_scaler.n_samples_seen_
+            }
     else:
         file = request.files['file']
-        uploaded_scaler_path = os.path.join(UPLOADS_DIR, secure_filename(file.filename))
+        uploaded_scaler_path = os.path.join(
+            UPLOADS_DIR, secure_filename(file.filename))
         file.save(uploaded_scaler_path)
         print(uploaded_scaler_path)
         print(f"succesfully saved scaler to '{uploaded_scaler_path}'")
         try:
             with open(uploaded_scaler_path, 'rb') as f:
-                try: uploaded_scaler = pickle.load(f)[0]
-                except: uploaded_scaler = pickle.load(f)
+                try:
+                    uploaded_scaler = pickle.load(f)[0]
+                except BaseException:
+                    uploaded_scaler = pickle.load(f)
             fileprops = {
-                            'type': str(uploaded_scaler),
-                            'features': uploaded_scaler.n_features_in_,
-                            'samples': uploaded_scaler.n_samples_seen_
-                    }
-        except:
+                'type': str(uploaded_scaler),
+                'features': uploaded_scaler.n_features_in_,
+                'samples': uploaded_scaler.n_samples_seen_
+            }
+        except BaseException:
             fileprops = False
         print('False fileprops')
         print(fileprops)
     return {'fileprops': fileprops}
+
 
 @socketio.on('connect')
 def on_connect():
@@ -193,21 +216,26 @@ def on_connect():
     socket_id = request.sid
     system_id = request.args.get('system')
     thread_stop_event.clear()
-    print(f"New client '{system_id}' connected with connection id: {socket_id}")
+    print(
+        f"New client '{system_id}' connected with connection id: {socket_id}")
     if not thread.is_alive():
         print(f"Starting thread for socket: '{socket_id}'...")
         thread = ValueThread()
         thread.id = system_id
         thread.sid = socket_id
-    else: print(f"Attempting to connect while thread is active")
+    else:
+        print(f"Attempting to connect while thread is active")
 
 # SocketIO disconnect event
+
+
 def disconnect():
     """SocketIO disconnect event."""
     system_id = request.args.get('system')
     engine.dispose()
     print('Engine disposed after disconnecting')
     print(f"Client '{system_id}' has been disconnected.")
+
 
 class ValueThread(Thread):
     """Handles signal thread, which allows the dynamic relationship between
@@ -216,8 +244,8 @@ class ValueThread(Thread):
 
     def __init__(self):
         """Instantiate class object."""
-        self.delay = INTERVAL # frequency of updates
-        self.index = timesteps+1 # initial index
+        self.delay = INTERVAL  # frequency of updates
+        self.index = timesteps + 1  # initial index
         self.X_pred = []
         self.get_first_pred_values()
         super(ValueThread, self).__init__()
@@ -231,7 +259,9 @@ class ValueThread(Thread):
                 # 'ME1_BackupBatt', 'ME1_Boostpress', 'ME1_EngineSpeed','ME1_ExhaustTemp1', 'ME1_ExhaustTemp2', 'ME1_FuelRate', 'ME1_Hours','ME1_LOPress', 'ME1_LubOilTemp', 'ME1_POWER', 'ME1_StartBatt','ME1_coolantTemp'
                 # Format: (rowNums, timesteps, signals)
                 pred_values = []
-                values = db.session.query(self.system).get(self.index).get_dict()
+                values = db.session.query(
+                    self.system).get(
+                    self.index).get_dict()
                 for key in NogvaEngines.__table__.columns.keys():
                     if key != 'id' and key != 'time':
                         pred_values.append(values[key])
@@ -258,10 +288,11 @@ class ValueThread(Thread):
     def run(self):
         self.get_data()
 
+
 def get_first_pred_values(timesteps, n_input_columns):
     with app.app_context():
-        X_pred = [] # Placeholder for each timestep of signal values
-        for i in range(1,timesteps + 1):
+        X_pred = []  # Placeholder for each timestep of signal values
+        for i in range(1, timesteps + 1):
             values = NogvaEngines.query.get(i).get_dict()
             # Set first and second column to id and time, respectively:
             pred_values = []
@@ -269,9 +300,10 @@ def get_first_pred_values(timesteps, n_input_columns):
                 if key != 'id' and key != 'time':
                     # Append current signal to values at current timestep:
                     pred_values.append(values[key])
-            X_pred.append(pred_values) # append timestep values to total list
+            X_pred.append(pred_values)  # append timestep values to total list
         return np.array(X_pred)
         # return np.reshape(X_pred, (1,timesteps,n_input_columns))
+
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
