@@ -1,11 +1,11 @@
-import React from 'react'
-import '../styles/main.scss'
-import Upload from './Upload'
-import ModelSpecifications from './ModelSpecifications'
+import React from "react";
+import "../styles/main.scss";
+import Upload from "./Upload";
+import ModelSpecifications from "./ModelSpecifications";
 
 export class Startpage extends React.Component {
-  constructor (props) {
-    super(props)
+  constructor(props) {
+    super(props);
     this.state = {
       selectedSystem: [],
       selectedInputs: [],
@@ -17,61 +17,61 @@ export class Startpage extends React.Component {
       modelProperties: {
         input: null,
         output: null,
-        timesteps: null
-      }
-    }
-    this.showSelectionParameters = false
+        timesteps: null,
+      },
+    };
+    this.showSelectionParameters = false;
 
-    this.onModelComplete = this.onModelComplete.bind(this)
-    this.onFileUploaded = this.onFileUploaded.bind(this)
+    this.onModelComplete = this.onModelComplete.bind(this);
+    this.onFileUploaded = this.onFileUploaded.bind(this);
   }
 
-  onModelComplete = modelParameters => {
+  onModelComplete = (modelParameters) => {
     this.setState({
-      selectedSystem: modelParameters['system'],
-      selectedInputs: modelParameters['input'],
-      selectedOutputs: modelParameters['output'],
-      settingsComplete: true
-    })
-  }
+      selectedSystem: modelParameters["system"],
+      selectedInputs: modelParameters["input"],
+      selectedOutputs: modelParameters["output"],
+      settingsComplete: true,
+    });
+  };
 
   onFileUploaded = (filename, id) => {
-    if (id === 'keras-model') {
-      this.setState({ modelFilename: filename })
+    if (id === "keras-model") {
+      this.setState({ modelFilename: filename });
     }
-    if (id === 'scaler') {
-      this.setState({ scalerFilename: filename })
+    if (id === "scaler") {
+      this.setState({ scalerFilename: filename });
     }
-  }
+  };
 
-  onModelProperties = modelProps => {
-    this.setState({ modelProperties: modelProps })
-  }
+  onModelProperties = (modelProps) => {
+    this.setState({ modelProperties: modelProps });
+  };
 
   setSampleBool = () => {
     if (!this.state.useSampleFiles) {
       this.setState({
         useSampleFiles: true,
-        modelFilename: 'sample_model.h5',
-        scalerFilename: 'sample_scaler.pckl'
-      })
+        modelFilename: "sample_model.h5",
+        scalerFilename: "sample_scaler.pckl",
+      });
     }
-  }
+  };
 
   checkFileUploades = () => {
     if (!!this.state.modelFilename && !!this.state.scalerFilename) {
-      return true
+      return true;
     }
-  }
+  };
 
-  resetUploadStates = id => {
+  resetUploadStates = (id) => {
     console.log(
-      'Here to change useSampleFiles',
+      "Here to change useSampleFiles",
       id,
-      id === 'keras-model',
-      id === 'scaler'
-    )
-    if (id === 'keras-model') {
+      id === "keras-model",
+      id === "scaler"
+    );
+    if (id === "keras-model") {
       this.setState({
         selectedSystem: [],
         selectedInputs: [],
@@ -81,52 +81,52 @@ export class Startpage extends React.Component {
         modelProperties: {
           input: null,
           output: null,
-          timesteps: null
-        }
-      })
+          timesteps: null,
+        },
+      });
     }
 
-    if (id === 'scaler') {
+    if (id === "scaler") {
       this.setState({
         selectedSystem: [],
         selectedInputs: [],
         selectedOutputs: [],
         useSampleFiles: false,
-        scalerFilename: null
-      })
+        scalerFilename: null,
+      });
     }
-  }
+  };
 
-  render () {
-    const showSelectionParameters = this.checkFileUploades()
+  render() {
+    const showSelectionParameters = this.checkFileUploades();
     return (
-      <div className='startpage'>
+      <div className="startpage">
         {!this.state.settingsComplete ? (
           [
             <div>
-              <div id='upload-content'>
+              <div id="upload-content">
                 <Upload
-                  id='keras-model'
-                  name='Keras model'
-                  format='.HDF5,.h5'
+                  id="keras-model"
+                  name="Keras model"
+                  format=".HDF5,.h5"
                   sendFilename={this.onFileUploaded}
                   useSampleFiles={this.state.useSampleFiles}
                   resetProps={this.resetUploadStates}
                   sendModelProperties={this.onModelProperties}
                 />
                 <Upload
-                  id='scaler'
-                  name='scaler'
-                  format='.pckl'
+                  id="scaler"
+                  name="scaler"
+                  format=".pckl"
                   sendFilename={this.onFileUploaded}
                   useSampleFiles={this.state.useSampleFiles}
                   resetProps={this.resetUploadStates}
                 />
               </div>
               <div>
-                <p style={{ textAlign: 'center', color: 'white' }}>
+                <p style={{ textAlign: "center", color: "white" }}>
                   Or use&nbsp;
-                  <a className='sample-link' onClick={this.setSampleBool}>
+                  <a className="sample-link" onClick={this.setSampleBool}>
                     sample model and scaler
                   </a>
                 </p>
@@ -141,8 +141,8 @@ export class Startpage extends React.Component {
                             </div>
                                 <a className="question-tooltip">?</a>
                         </div> */}
-              <div className='model-specifications'>{/* <Threshold /> */}</div>
-              <div className='model-selectors-container'>
+              <div className="model-specifications">{/* <Threshold /> */}</div>
+              <div className="model-selectors-container">
                 {showSelectionParameters ? (
                   <ModelSpecifications
                     inputSignals={this.state.modelProperties.inp}
@@ -152,14 +152,14 @@ export class Startpage extends React.Component {
                   />
                 ) : null}
               </div>
-            </div>
+            </div>,
           ]
         ) : (
           <div>Anomaly detection</div>
         )}
       </div>
-    )
+    );
   }
 }
 
-export default Startpage
+export default Startpage;
