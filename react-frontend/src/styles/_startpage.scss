@@ -17,7 +17,7 @@ div.upload-container{
 
 div.upload{
   background-color:#4b7e7991;
-  width:200px;
+  height: 150px;
   padding:0px;
   margin:0px;
 }
@@ -97,14 +97,18 @@ span.tooltiptext{
   text-align: justify;
   padding: 10px;
   border-radius: 6px;
+  border: 0.5px solid;
+  border-color: white;
   position: absolute;
-  // z-index: 1;
+  margin: 10px;
+  z-index: 1;
+  top: -100px;
+  right: -400px;
 }
 
 div.system-selector-container{
   margin: 50px;
 }
-
 
 div.io-selector-container{
   margin-top: 50px;
@@ -171,4 +175,10 @@ button#continue-with-IO:hover:enabled span#cont-btn:after {
 button#continue-with-IO:enabled:active{
   background-color: rgba(255, 255, 255, 0.835);
   transition: none;
+}
+
+#model-upload-properties{
+  text-align: left;
+  font-size: 14px;
+  line-height: 20px;
 }
