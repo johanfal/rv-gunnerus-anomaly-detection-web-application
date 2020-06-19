@@ -12,7 +12,6 @@ from flask_socketio import SocketIO, emit, send
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import load_only
 from tensorflow.keras.models import load_model
-
 from models import *
 from werkzeug.utils import secure_filename
 
@@ -32,19 +31,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://dzetpohgmhykyo:224b34d1' \
                                         '162-157.compute-1.amazonaws.com:54' \
                                         '32/d8s9d5jbimqmeo'
 
-uploads_dir = os.path.join(app.instance_path, 'uploads')
-os.makedirs(uploads_dir, exist_ok=True)
-
-# files = os.listdir(uploads_dir)
-# for f in files:
-    # os.remove(os.path.join(uploads_dir,f))
-
-# for f in files:
-#     os.remove(f)
-# UPLOAD_FOLDER = 'flask-backend'
-# ALLOWED_EXTENSIONS = set(['h5', 'hdf5', 'pckl'])
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
+UPLOADS_DIR = os.path.join(app.instance_path, 'uploads')
+SAMPLES_DIR = os.path.join(app.instance_path, 'samples')
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # Prevent unnecessary console warning:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -65,14 +54,15 @@ thread = Thread() # define thread object
 thread_stop_event = Event() # define event used for stopping thread
 
 # Global variables:
-global timesteps, X_pred, X_tran, n_input_columns, keras_model, scaler, models
+global timesteps, X_pred, X_tran, n_input_columns, uploaded_keras_model, uploaded_scaler, sample_keras_model, sample_scaler, models
 
 # Get dict of all model classes with table names as key, as defined in models.py:
 models = get_models()
 
 # Load sample Keras model (input shape: (n, 30, 12), output shape: (1,2)):
 if False:
-    keras_model = load_model('sample_model.h5')
+    keras_model = load_model('instance/samples/sample_model.h5')
+    print(keras_model)
     timesteps = keras_model.input_shape[1] # timesteps used in model
     n_input_columns = keras_model.input_shape[2] # number of input columns
     n_output_columns = keras_model.output_shape[1] # number of predicted columns
@@ -93,14 +83,13 @@ if False:
 def get_systems():
     """Return a list of systems based on the entry tables in the PostgreSQL
     database, which are instantiated through SQL Alchemy in 'models.py'."""
-    # systems = {}
-    # tables = engine.table_names()
-    # for table in tables:
-    #     if not models[table].query.first():
-    #         systems[table] = False # if result is None (empty table)
-    #     else:
-    #         systems[table] = True # if result is not None (non-empty table)
-    systems = {'Nogva Engines': 'NogvaEngines'}
+    systems = {}
+    tables = engine.table_names()
+    for table in tables:
+        if not models[table].query.first():
+            systems[table] = False # if result is None (empty table)
+        else:
+            systems[table] = True # if result is not None (non-empty table)
     return {'systems':systems} # return boolean dictionary with tables as keys
 
 @app.route('/signals/<system_table>', methods = ['GET', 'POST'])
@@ -114,8 +103,7 @@ def get_signals(system_table):
 
     # Get the name of each column of the selected system:
     for col in table_props:
-        if 'me1' in col['name']:
-            signals.append(col['name'])
+        signals.append(col['name'])
     return {'signals': signals}
 
 @app.route('/update_selected/<system_table>/<cols_str>', methods = ['GET', 'POST'])
@@ -144,35 +132,59 @@ def stop_thread():
     engine.dispose()
     return {'thread_stopped': False}
 
-@app.route('/keras_model', methods=['GET','POST'])
-def save_uploaded_model():
+@app.route('/keras_model/<use_sample>', methods=['GET','POST'])
+def save_uploaded_model(use_sample):
     """Receives uploaded Keras model file from frontend client."""
-    file = request.files['file']
-    model_path = os.path.join(uploads_dir, secure_filename(file.filename))
-    file.save(model_path)
-    model = load_model(model_path)
-    return {'fileprops' : {
-        'inp': model.input_shape[2],
-        'out': model.output_shape[1],
-        'timesteps': model.input_shape[1]
-    }}
+    if use_sample == 'true':
+        sample_model_path = os.path.join(SAMPLES_DIR, 'sample_model.h5')
+        keras_model = load_model(sample_model_path)
+    else:
+        file = request.files['file']
+        model_path = os.path.join(UPLOADS_DIR, secure_filename(file.filename))
+        file.save(model_path)
+        print(f"succesfully saved model to '{model_path}'")
+        try: keras_model = load_model(model_path)
+        except: fileprops = False
+    try: fileprops = {
+                        'inp': keras_model.input_shape[2],
+                        'out': keras_model.output_shape[1],
+                        'timesteps': keras_model.input_shape[1]
+                }
+    except: fileprops = False
+    return {'fileprops' : fileprops}
 
-@app.route('/scaler', methods=['GET','POST'])
-def save_uploaded_scaler():
+@app.route('/scaler/<use_sample>', methods=['GET','POST'])
+def save_uploaded_scaler(use_sample):
     """Receives uploaded sklearn scaler file from frontend client."""
-    file = request.files['file']
-    scaler_path = os.path.join(uploads_dir, secure_filename(file.filename))
-    file.save(scaler_path)
-    print("succesfully saved to " + scaler_path + "..")
-    with open(scaler_path, 'rb') as f:
-        try: scaler = pickle.load(f)[0]
-        except: scaler = pickle.load(f)
-    print(type(scaler))
-    return {'fileprops' : {
-        'type': str(scaler),
-        'features': scaler.n_features_in_,
-        'samples': scaler.n_samples_seen_
-    }}
+    if use_sample == 'true':
+        sample_scaler_path = os.path.join(SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
+        with open(sample_scaler_path, 'rb') as f:
+            sample_scaler = pickle.load(f)[0]
+            fileprops = {
+                            'type': str(sample_scaler),
+                            'features': sample_scaler.n_features_in_,
+                            'samples': sample_scaler.n_samples_seen_
+                    }
+    else:
+        file = request.files['file']
+        uploaded_scaler_path = os.path.join(UPLOADS_DIR, secure_filename(file.filename))
+        file.save(uploaded_scaler_path)
+        print(uploaded_scaler_path)
+        print(f"succesfully saved scaler to '{uploaded_scaler_path}'")
+        try:
+            with open(uploaded_scaler_path, 'rb') as f:
+                try: uploaded_scaler = pickle.load(f)[0]
+                except: uploaded_scaler = pickle.load(f)
+            fileprops = {
+                            'type': str(uploaded_scaler),
+                            'features': uploaded_scaler.n_features_in_,
+                            'samples': uploaded_scaler.n_samples_seen_
+                    }
+        except:
+            fileprops = False
+        print('False fileprops')
+        print(fileprops)
+    return {'fileprops': fileprops}
 
 @socketio.on('connect')
 def on_connect():
