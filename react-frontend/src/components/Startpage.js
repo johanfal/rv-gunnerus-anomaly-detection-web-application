@@ -32,9 +32,9 @@ export class Startpage extends React.Component {
 
   onModelComplete = (modelParameters) => {
     this.setState({
-      selectedSystem: modelParameters["system"],
-      selectedInputs: modelParameters["input"],
-      selectedOutputs: modelParameters["output"],
+      selectedSystem: modelParameters["selectedSystem"],
+      selectedInputs: modelParameters["selectedInputs"],
+      selectedOutputs: modelParameters["selectedOutputs"],
       settingsComplete: true,
     });
   };
@@ -69,12 +69,6 @@ export class Startpage extends React.Component {
   };
 
   resetUploadStates = (id) => {
-    console.log(
-      "Here to change useSampleFiles",
-      id,
-      id === "keras-model",
-      id === "scaler"
-    );
     if (id === "keras-model") {
       this.setState({
         selectedSystem: [],
@@ -118,10 +112,14 @@ export class Startpage extends React.Component {
     const settingsComplete = this.state.settingsComplete;
     const useSampleFiles = this.state.useSampleFiles;
     const modelProperties = this.state.modelProperties;
-    const system = this.state.system;
+    const selectedSystem = this.state.selectedSystem[0];
+    const selectedInputs = this.state.selectedInputs;
+    const selectedOutputs = this.state.selectedOutputs;
+    const modelFilename = this.state.modelFilename;
+    const scalerFilename = this.state.scalerFilename;
     return (
       <div className="startpage">
-        {!settingsComplete ? (
+        {settingsComplete ? ( // change ot !settingsComplete to bring back selections
           [
             <div>
               <div id="upload-content">
@@ -195,7 +193,33 @@ export class Startpage extends React.Component {
             </div>,
           ]
         ) : (
-          <ChartDashboard system={system} />
+          <ChartDashboard
+            system="Nogva Engines"
+            inputs={[
+              "me1_backupbatt",
+              "me1_boostpress",
+              "me1_enginespeed",
+              "me1_exhausttemp1",
+              "me1_exhausttemp2",
+              "me1_fuelrate",
+              "me1_hours",
+              "me1_lopress",
+              "me1_luboiltemp",
+              "me1_power",
+              "me1_startbatt",
+              "me1_coolanttemp",
+            ]}
+            outputs={["me1_exhausttemp1", "me1_exhausttemp2"]}
+            sampleFiles={true}
+            modelFilename="sample_model.h5"
+            scalerFilename="sample_scaler.pckl"
+            // system={selectedSystem}
+            // inputs={selectedInputs}
+            // outputs={selectedOutputs}
+            // sampleFiles={useSampleFiles}
+            // modelFilename={modelFilename}
+            // scalerFilename={scalerFilename}
+          />
         )}
       </div>
     );

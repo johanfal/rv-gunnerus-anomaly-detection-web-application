@@ -74,7 +74,7 @@ export class ModelSpecifications extends React.Component {
 
   onContinue = () => {
     const modelParameters = {
-      system: this.state.selected,
+      selectedSystem: this.state.selected,
       selectedInputs: this.state.selectedInputs,
       selectedOutputs: this.state.selectedOutputs,
     };
@@ -84,7 +84,6 @@ export class ModelSpecifications extends React.Component {
   render() {
     const options = this.state.options;
     const selected = this.state.selected;
-    const system = this.props.system;
     const maxSelect = this.maxSelect;
     const reachedSystemMax = selected.length === maxSelect;
     const reachedInputMax =
@@ -96,7 +95,6 @@ export class ModelSpecifications extends React.Component {
     const useSampleFiles = this.props.useSampleFiles;
     const inputSignals = this.props.inputSignals;
     const outputSignals = this.props.outputSignals;
-    console.log(options);
     return (
       <div className="system-selector-container">
         <div className="mod-selector-container">
@@ -266,8 +264,8 @@ class ShapeSpecifications extends React.Component {
           {useSampleFiles
             ? `${typeStrTitle} signals used in sample model ` +
               `(${selected.length} in total):`
-            : `Select the ${typeStr} signals used by your ML ` +
-              `model (${selected.length} of ${maxSelect} selected):`}
+            : `Select the ${typeStr} signals used by your ML model (` +
+              `${selected.length} of ${maxSelect} selected):`}
         </div>
         <MultiSelect
           className="model_selector"

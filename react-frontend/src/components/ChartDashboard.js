@@ -17,8 +17,9 @@ export class ChartDashboard extends React.Component {
     };
   }
   socket;
-  system = this.props.system;
-
+  system = this.props.selectedSystem;
+  inputs = this.props.selectedInputs;
+  outputs = this.props.selectedOutputs;
   // If component is succesfully mounted
   componentDidMount() {
     this.on_reload(); // call reload function
@@ -73,7 +74,7 @@ export class ChartDashboard extends React.Component {
   };
 
   componentDidUpdate(_prev_props, prev_state) {
-    let update_state = false; // update with setState at end of lifecycle method
+    let update_state = false; // affects useState at end of lifecycle method
     const selected = this.state.selected;
     const sio_status = this.state.sio_status;
     let chart_items = this.state.chart_items;

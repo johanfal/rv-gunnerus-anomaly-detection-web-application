@@ -72,7 +72,6 @@ export const Upload = (props) => {
       const fileExtension = re.exec(name)[0];
       data.append("file", acceptedFiles[0]);
       data.append("filename", name);
-      console.log(data);
       setUploaded(true);
 
       props.sendFilename(name, props.id); // send filename and type to parent
@@ -172,7 +171,6 @@ export const Upload = (props) => {
         setFilename("sample_scaler.pckl");
         fetch(`scaler/${true}`).then((response) => {
           response.json().then((data) => {
-            console.log(data.fileprops);
             setFileProperties({
               type: data.fileprops.type,
               features: data.fileprops.features,
