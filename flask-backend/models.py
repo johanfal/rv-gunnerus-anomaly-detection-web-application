@@ -166,7 +166,7 @@ class SeapathMRU_rates(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     pass
 
-def get_models():
+def get_table_classes():
     return {
         'DP Heading': dpHeading,
         'DP Thruster': dpThruster,
