@@ -102,7 +102,7 @@ def get_signals(system_table):
 
 
 @app.route('/update_selected/<cols_str>',
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def get_values(system_table, cols_str):
     """Updates fields based on currently selected signals and starts
     thread-based parallelism if no thread is alive."""
@@ -201,7 +201,7 @@ def save_uploaded_scaler(use_sample):
 
 
 @app.route('/instantiate_thread/<system>/<input_cols>/<output_cols>',
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def initiate_thread(system, input_cols, output_cols):
     input_cols = input_cols.split(",")
     output_cols = output_cols.split(",")
@@ -214,6 +214,7 @@ def initiate_thread(system, input_cols, output_cols):
         print(f"Attempting to connect while thread is active")
     return {'thread_instantiated': True}
 
+
 @socketio.on('connect')
 def on_connect():
     """SocketIO connect event."""
@@ -222,7 +223,8 @@ def on_connect():
     thread.sio_id = sio_id  # socket IO identification
     thread_stop_event.clear()
     print(
-        f"New client '{thread.system}' connected with connection id: {sio_id}")
+        f"New client '{thread.system}' connected with connection id: {sio_id}"
+    )
 
 
 @socketio.on('disconnect')
@@ -267,12 +269,6 @@ class ValueThread(Thread):
         global table_classes  # Delete (only when startpage is disabled)
         # Delete (only when startpage is disabled)
         table_classes = get_table_classes()
-        print('Input values in get_first_input_values():')
-        print(timesteps)
-        print(input_cols)
-        print(system)
-        print(table_classes[system])
-        print('--fin-search-string--')
         with app.app_context():  # enable database access through SQLAlchemy
             X_pred = []  # Placeholder for each timestep of signal values
             for i in range(1, timesteps + 1):
