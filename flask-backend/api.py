@@ -223,7 +223,7 @@ def on_connect():
     thread.sio_id = sio_id  # socket IO identification
     thread_stop_event.clear()
     print(
-        f"New client '{thread.system}' connected with connection id: {sio_id}"
+        f"New client '{request.args.get('system')}' connected with connection id: {sio_id}"
     )
 
 
