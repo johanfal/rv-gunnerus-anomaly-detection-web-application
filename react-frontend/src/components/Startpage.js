@@ -116,6 +116,7 @@ export class Startpage extends React.Component {
     const selectedInputs = this.state.selectedInputs;
     const selectedOutputs = this.state.selectedOutputs;
     const modelFilename = this.state.modelFilename;
+    const modelTimesteps = this.state.modelProperties.timesteps;
     const scalerFilename = this.state.scalerFilename;
     return (
       <div className="startpage">
@@ -212,12 +213,14 @@ export class Startpage extends React.Component {
             outputs={["me1_exhausttemp1", "me1_exhausttemp2"]}
             sampleFiles={true}
             modelFilename="sample_model.h5"
+            modelTimesteps={30}
             scalerFilename="sample_scaler.pckl"
             // system={selectedSystem}
             // inputs={selectedInputs}
             // outputs={selectedOutputs}
             // sampleFiles={useSampleFiles}
             // modelFilename={modelFilename}
+            // modelTimesteps={modelTimesteps}
             // scalerFilename={scalerFilename}
           />
         )}
