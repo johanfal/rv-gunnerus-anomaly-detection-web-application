@@ -4,7 +4,7 @@ const SERIES_TYPES = ["LINE", "AREA"];
 const TRANSITION_DURATION = 100;
 const MAX_Y_TICKS = 6;
 
-export default class D3TsChart {
+export class ChartVisuals {
   // HTML Element References
   elRef = null; // SVG Parent container element ref
   svg; // Main SVG container with margins
@@ -275,3 +275,5 @@ export default class D3TsChart {
     }
   }
 }
+
+export default ChartVisuals;
