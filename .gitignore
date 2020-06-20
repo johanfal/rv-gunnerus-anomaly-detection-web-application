@@ -4,7 +4,6 @@
 node_modules
 /.pnp
 .pnp.js
-venv
 
 # testing
 /coverage
@@ -20,7 +19,7 @@ venv
 .env.production.local
 .vscode
 __pycache__
-
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.vscode/settings.json
