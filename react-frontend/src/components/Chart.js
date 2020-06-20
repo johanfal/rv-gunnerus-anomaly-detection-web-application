@@ -1,6 +1,6 @@
-import React, { createRef, Component } from "react";
+import React, { createRef } from "react";
 
-import D3TsChart from "./D3-Visuals";
+import D3TsChart from "./ChartVisuals";
 
 const MAX_POINTS_TO_STORE = 50;
 const DEFAULT_X_TICKS = 30;
@@ -17,19 +17,18 @@ const DEFAULT_X_TICKS = 30;
  *
  * 3. `componentWillUnmount()` disconects from socket.
  */
-export class Chart extends Component {
+export class Chart extends React.Component {
   constructor(props) {
     super(props);
-
     this.state = {
       data: [],
-      last_time_str: null,
-      last_date_str: "",
+      lastTimeStr: null,
+      lastDateStr: "",
       connected: false,
       error: "",
       status: null,
+      threshold: 0,
     };
-
     this.seriesList = [
       {
         name: "sensor-data",
@@ -39,33 +38,39 @@ export class Chart extends Component {
         label: "Reading",
         labelClass: "readings",
       },
-      {
-        name: "prediction",
-        type: "LINE",
-        stroke: "#E67002",
-        strokeWidth: 3,
-        label: "Prediction",
-        labelClass: "prediction",
-      },
-      {
-        name: "anomaly",
-        type: "AREA",
-        fill: "rgba(216, 13, 49, 0.35)",
-        stroke: "transparent",
-        strokeWidth: 0,
-        label: "Anomaly",
-        labelClass: "anomaly",
-      },
     ];
+    if (this.props.pred) {
+      this.seriesList.push(
+        {
+          name: "prediction",
+          type: "LINE",
+          stroke: "#E67002",
+          strokeWidth: 3,
+          label: "Prediction",
+          labelClass: "prediction",
+        },
+        {
+          name: "anomaly",
+          type: "AREA",
+          fill: "rgba(216, 13, 49, 0.35)",
+          stroke: "transparent",
+          strokeWidth: 0,
+          label: "Anomaly",
+          labelClass: "anomaly",
+        }
+      );
+    }
+
     this.tsChart = new D3TsChart();
     this.wrapper = createRef();
+    this.updateThreshold = this.updateThreshold.bind(this);
   }
 
   socket;
 
   componentDidMount() {
     // At this point, this.props includes the input from the called component in "App.js"
-    if (this.props["sensor_id"] === undefined)
+    if (this.props["sensorId"] === undefined)
       throw new Error("You have to pass 'sensorId' prop to Chart component");
     if (this.props["x-ticks"] > MAX_POINTS_TO_STORE)
       throw new Error(
@@ -82,76 +87,70 @@ export class Chart extends Component {
     });
 
     this.tsChart.addSeries(this.seriesList[0]); // readings
-    this.tsChart.addSeries(this.seriesList[1]); // anomaly
-    this.tsChart.addSeries(this.seriesList[2]); // prediction
+    if (this.props.pred) {
+      this.tsChart.addSeries(this.seriesList[1]); // anomaly
+      this.tsChart.addSeries(this.seriesList[2]); // prediction
+    }
 
     this.attachFocusWatcher();
   }
 
-  static getDerivedStateFromProps(next_props, prev_state) {
-    // You are currently working on finding a condition that removes duplicates :)
-    // Almost there!
-
-    if (next_props.values.time === undefined) {
-      return { last_time_str: null, last_date_str: "", connected: false };
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (nextProps.values.time === undefined) {
+      return { lastTimeStr: null, lastDateStr: "", connected: false };
     }
-    const values = next_props.values;
+    const values = nextProps.values;
 
     const datetime = new Date(values.time);
     const timestamp = Date.parse(datetime);
-    const date_str = datetime.toLocaleDateString("en-GB");
-    const time_str = datetime.toLocaleTimeString("en-GB");
-    var last_timestamp = "";
-    const data = prev_state.data;
-    if (prev_state.data.length > 0) {
-      last_timestamp = prev_state.data[prev_state.data.length - 1].timestamp;
+    const dateStr = datetime.toLocaleDateString("en-GB");
+    const timeStr = datetime.toLocaleTimeString("en-GB");
+    var lastTimestamp = "";
+    const data = prevState.data;
+    if (prevState.data.length > 0) {
+      lastTimestamp = prevState.data[prevState.data.length - 1].timestamp;
     }
 
-    if (timestamp !== last_timestamp) {
+    if (timestamp !== lastTimestamp) {
       const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
-      const pred_value =
+      const predValue =
         values.signal + Math.floor(Math.random() * 100) / 100 - 0.5;
-      var new_values;
-      if (next_props.pred) {
-        new_values = {
-          timestamp: timestamp,
-          value: values.signal,
-          pred: pred_value,
-          anomaly: Math.abs(pred_value - values.signal) > 0.25 ? 1 : 0,
-        };
-      } else {
-        new_values = {
-          timestamp: timestamp,
-          value: values.signal,
-          anomaly: Math.abs(pred_value - values.signal) > 0.25 ? 1 : 0,
-        };
+      const newValues = {
+        timestamp: timestamp,
+        value: values.signal,
+      };
+      if (nextProps.pred) {
+        newValues["pred"] = predValue;
+        newValues["anomaly"] =
+          Math.abs(predValue - values.signal) > 0.25 ? 1 : 0;
+        // Math.abs(predValue-values.signal) > this.state.threshold
       }
-      // Need to replace 0 below with anomaly 1 or 0
-      data.push(new_values);
+
+      data.push(newValues);
 
       return {
         data: data.slice(pointsToStore),
         connected: true,
         error: false,
-        last_date_str: date_str,
-        last_time_str: time_str,
+        lastDateStr: dateStr,
+        lastTimeStr: timeStr,
       };
     } else {
       return {
         data: data,
         connected: true,
         error: false,
-        last_date_str: date_str,
-        last_time_str: time_str,
+        lastDateStr: dateStr,
+        lastTimeStr: timeStr,
       };
     }
   }
 
-  shouldComponentUpdate(_next_props, _next_state) {
+  shouldComponentUpdate(_nextProps, _nextState) {
     return true;
   }
 
-  componentDidUpdate(_prev_props, _prev_state) {
+  componentDidUpdate(_prev_props, _prevState) {
     this.updateChart();
   }
 
@@ -197,8 +196,8 @@ export class Chart extends Component {
 
     this.tsChart.adjustAxes(data, this.props.pred);
     this.tsChart.setSeriesData("sensor-data", data, false);
-    this.tsChart.setSeriesData("anomaly", anomalyLine, false);
     if (this.props.pred) {
+      this.tsChart.setSeriesData("anomaly", anomalyLine, false);
       this.tsChart.setSeriesData("prediction", data, false);
     }
   }
@@ -208,15 +207,19 @@ export class Chart extends Component {
     this.tsChart.toggleSeries(target.id);
   };
 
+  updateThreshold = (event) => {
+    event.preventDefault();
+    const thresholdValue = this.thresholdField.value;
+    this.setState({ threshold: thresholdValue });
+  };
+
   // Render Chart component
   render = () => (
     <div className="card" ref={this.wrapper}>
       <h2>
-        {!this.state.last_time_str
+        {!this.state.lastTimeStr
           ? "Connecting..."
-          : `${this.props.sensor_id.toUpperCase()}: ${
-              this.props.values.signal
-            }`}
+          : `${this.props.sensorId.toUpperCase()}: ${this.props.values.signal}`}
       </h2>
 
       <span
@@ -241,18 +244,56 @@ export class Chart extends Component {
               onClick={this.toggleSeries}
             >
               <i className="box"></i>
-              {series.label}
+              {series.label === "Anomaly"
+                ? `${series.label} (threshold: ${this.state.threshold})`
+                : series.label}
             </span>
           );
         })}
       </div>
-
       <span
         className={"timestamp " + (this.state.connected ? "success" : "danger")}
       >
         {this.state.connected ? "" : "Last reading was at "}
-        {`${this.state.last_date_str} ${this.state.last_time_str}`}
+        {`${this.state.lastDateStr} ${this.state.lastTimeStr}`}
       </span>
+
+      {this.props.pred
+        ? [
+            <div className="threshold-container">
+              <hr
+                style={{
+                  border: "1px solid rgb(230,230,230)",
+                  marginBottom: "0px",
+                }}
+              />
+              <br />
+
+              <form
+                className="threshold-form"
+                onSubmit={(event) => this.updateThreshold(event)}
+              >
+                Choose threshold for anomalies:
+                <input
+                  className="threshold-input"
+                  type="number"
+                  name="threshold"
+                  autocomplete="off"
+                  step="0.01"
+                  placeholder="0"
+                  ref={(threshold) => (this.thresholdField = threshold)}
+                  onClick={(event) => this.updateThreshold(event)}
+                />
+                <button
+                  className="threshold-submit"
+                  onClick={(event) => this.updateThreshold(event)}
+                >
+                  Update
+                </button>
+              </form>
+            </div>,
+          ]
+        : null}
     </div>
   );
 }
