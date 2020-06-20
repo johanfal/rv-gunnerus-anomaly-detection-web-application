@@ -1,9 +1,17 @@
 {
-    "python.pythonPath": "venv/scripts/python.exe",
-    "git.ignoreLimitWarning": true,
-    "workbench.colorCustomizations": {
-        "terminal.foreground": "#83e493",
-        "terminal.background": "#233d47",
+  "python.pythonPath": "flask-backend\\venv\\scripts\\python.exe",
+  "git.ignoreLimitWarning": true,
+  "workbench.colorCustomizations": {
+    "terminal.foreground": "#83e493",
+    "terminal.background": "#233d47",
     "python.analysis.disabled": ["unresolved-import"]
-    }
+  },
+  "python.formatting.provider": "autopep8",
+  "python.formatting.autopep8Args": [
+    "--max-line-length",
+    "77",
+    "--aggressive",
+    "--aggressive"
+  ],
+  "editor.formatOnSave": true
 }
