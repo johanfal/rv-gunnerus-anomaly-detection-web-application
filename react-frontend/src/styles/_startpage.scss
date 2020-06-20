@@ -1,5 +1,4 @@
-
-#upload-content{
+#upload-content {
   display: inline-block;
   width: 100%;
   align-items: center;
@@ -7,56 +6,55 @@
   overflow: hidden;
 }
 
-div.upload-container{
+div.upload-container {
   display: inline-block;
   color: white;
   width: 300;
-  padding:0px;
-  margin:0px;
+  padding: 0px;
+  margin: 0px;
 }
 
-div.upload{
-  background-color:#4b7e7991;
+div.upload {
+  background-color: #4b7e7991;
   height: 150px;
-  padding:0px;
-  margin:0px;
+  padding: 0px;
+  margin: 0px;
 }
 
-div.upload:hover{
+div.upload:hover {
   cursor: pointer;
-  background-color:#66948f91;
+  background-color: #66948f91;
 }
 
-a.sample-link{
+a.sample-link {
   text-decoration: underline;
   font-style: italic;
-
 }
-a.sample-link:hover{
-  color:rgba(255, 255, 255, 0.85);
+a.sample-link:hover {
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-input[type=number] {
-    -moz-appearance:textfield; /* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
 }
 
-.threshold-form-container{
-  color:white;
-  align-items:center;
+.threshold-form-container {
+  color: white;
+  align-items: center;
   display: flex;
   justify-content: center;
 }
 
-div.question-container{
-  font-size:12px;
-  width:8px;
+div.question-container {
+  font-size: 12px;
+  width: 8px;
   padding: 1px 3px 5px 3px;
   text-align: center;
   align-items: center;
@@ -64,32 +62,31 @@ div.question-container{
   border: 1px solid;
   border-radius: 8px;
   color: white;
-
 }
-div.question-container:hover{
+div.question-container:hover {
   background-color: rgba(255, 255, 255, 0.164);
   cursor: pointer;
-  .tooltip-container{
+  .tooltip-container {
     visibility: visible;
   }
-  .tooltiptext{
+  .tooltiptext {
     visibility: visible;
   }
 }
 
-a.question-tooltip{
+a.question-tooltip {
   text-decoration: none;
 }
 
-div.tooltip-container{
-  visibility:hidden;
+div.tooltip-container {
+  visibility: hidden;
   position: relative;
   display: inline-block;
   cursor: auto;
 }
 
-span.tooltiptext{
-  font-size:16px;
+span.tooltiptext {
+  font-size: 16px;
   visibility: hidden;
   width: 350px;
   background-color: rgba(42, 42, 42, 0.5);
@@ -106,25 +103,25 @@ span.tooltiptext{
   right: -400px;
 }
 
-div.system-selector-container{
+div.system-selector-container {
   margin: 50px;
 }
 
-div.io-selector-container{
+div.io-selector-container {
   margin-top: 50px;
   margin-bottom: 240px;
 }
-div.mod-spec-text{
-  color:white;
+div.mod-spec-text {
+  color: white;
   font-size: 18px;
   margin: 55px 5px 5px 5px;
 }
 
-div.continue-with-IO{
-  margin:30px;
+div.continue-with-IO {
+  margin: 30px;
   text-align: center;
 }
-button#continue-with-IO{
+button#continue-with-IO {
   border-radius: 8px;
   background-color: #ffffff;
   border: 1px solid;
@@ -146,7 +143,7 @@ button#continue-with-IO:enabled span#cont-btn {
   transition: 0.5s;
 }
 
-button#continue-with-IO:disabled{
+button#continue-with-IO:disabled {
   cursor: default;
   display: inline-block;
   position: relative;
@@ -155,7 +152,7 @@ button#continue-with-IO:disabled{
 }
 
 button#continue-with-IO:enabled span#cont-btn:after {
-  content: '\00bb';
+  content: "\00bb";
   position: absolute;
   opacity: 0;
   top: 0;
@@ -172,12 +169,12 @@ button#continue-with-IO:hover:enabled span#cont-btn:after {
   transition: 0.5s;
 }
 
-button#continue-with-IO:enabled:active{
+button#continue-with-IO:enabled:active {
   background-color: rgba(255, 255, 255, 0.835);
   transition: none;
 }
 
-#model-upload-properties{
+#model-upload-properties {
   text-align: left;
   font-size: 14px;
   line-height: 20px;

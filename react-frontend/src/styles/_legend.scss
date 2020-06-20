@@ -37,7 +37,9 @@
     }
   }
 
-  .readings.hidden, .anomaly.hidden, .prediction.hidden {
+  .readings.hidden,
+  .anomaly.hidden,
+  .prediction.hidden {
     color: $gray-hex;
     .box {
       background-color: $gray-hex;
