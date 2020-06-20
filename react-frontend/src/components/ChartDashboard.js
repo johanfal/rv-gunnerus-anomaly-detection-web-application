@@ -62,37 +62,6 @@ export class ChartDashboard extends React.Component {
     });
   };
 
-  // Get list of signals
-  // signals = () => {
-  //   let chartItems = this.state.chartItems;
-
-  //   // API get-request
-  //   fetch(`signals/${system}`).then((response) =>
-  //     response.json().then((data) => {
-  //       this.signals = data.signals;
-
-  //       // Filter out 'id' and 'time' from list of possible signals
-  //       this.signals = this.signals.filter((e) => e !== "id" && e !== "time");
-
-  //       // Loop through signals
-  //       for (let i = 0; i < this.signals.length; i++) {
-  //         // Add signal as selector option with label and value
-  //         this.options.push({
-  //           label: this.signals[i],
-  //           value: this.signals[i],
-  //         });
-  //       }
-
-  //       // Update mounted states
-  //       this.setState({
-  //         options: this.options,
-  //         chartItems: chartItems,
-  //         sioStatus: this.getStatus(chartItems),
-  //       });
-  //     })
-  //   );
-  // };
-
   connect = () => {
     this.socket = io.connect(`/?system=${this.system}`);
   };
