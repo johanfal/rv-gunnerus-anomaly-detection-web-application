@@ -14,12 +14,14 @@ export class ChartDashboard extends React.Component {
       options: [], // multi-select options
       chartItems: {}, // rendered charts
       sioStatus: false, // socket status
-      allSignals: [],
+      allSignals: [], // all signals available for visualization
+      instantiated: false, // if thread has been instantiated
     };
     this.system = this.props.system;
     this.inputs = this.props.inputs;
     this.outputs = this.props.outputs;
     this.timesteps = this.props.modelTimesteps;
+    this.sampleFiles = this.props.sampleFiles;
   }
   socket;
   // If component is succesfully mounted
@@ -28,7 +30,13 @@ export class ChartDashboard extends React.Component {
     fetch("scaler/true");
     const strInputs = this.inputs.join(",");
     const strOutputs = this.outputs.join(",");
-    fetch(`instantiate_thread/${this.system}/${strInputs}/${strOutputs}`);
+
+    fetch(`instantiate_thread/${this.system}/${strInputs}/${strOutputs}`).then(
+      (response) =>
+        response.json().then((data) => {
+          this.setState({ instantiated: data.thread_instantiated });
+        })
+    );
     this.onReload(); // call reload function
     this.setSignalSelection(); // get list of signals based on API call to database
   }
@@ -39,7 +47,7 @@ export class ChartDashboard extends React.Component {
   onReload = () => {
     if (window.performance) {
       if (performance.navigation.type === 1) {
-        fetch("reload"); // restart thread through API call
+        fetch("reload"); // stop thread activity through API call
       }
     }
   };
@@ -115,11 +123,17 @@ export class ChartDashboard extends React.Component {
   addNewCharts = (newlySelected, selectedItems) => {
     for (let sig of newlySelected) {
       const isSignalToPredict = this.outputs.includes(sig); // boolean
-      selectedItems[sig] = this.addChart(sig, sig, isSignalToPredict, {
-        id: undefined,
-        time: undefined,
-        signal: undefined,
-      });
+      selectedItems[sig] = this.addChart(
+        sig,
+        sig,
+        isSignalToPredict,
+        this.sampleFiles,
+        {
+          id: undefined,
+          time: undefined,
+          signal: undefined,
+        }
+      );
     }
     return selectedItems;
   };
@@ -145,17 +159,32 @@ export class ChartDashboard extends React.Component {
     const id = values.id;
     for (let sig of selected) {
       const isSignalToPredict = this.outputs.includes(sig); // boolean
-      chartItems[sig] = this.addChart(sig, sig, isSignalToPredict, {
-        id: id,
-        time: time,
-        signal: values[sig],
-      });
+      chartItems[sig] = this.addChart(
+        sig,
+        sig,
+        isSignalToPredict,
+        this.sampleFiles,
+        {
+          id: id,
+          time: time,
+          signal: values[sig],
+          pred: isSignalToPredict ? values[`${sig}_pred`] : null,
+        }
+      );
     }
     this.setState({ chartItems: chartItems });
   };
 
-  addChart = (sensor, key, pred, values) => {
-    return <Chart sensorId={sensor} key={key} values={values} pred={pred} />;
+  addChart = (sensor, key, pred, samples, values) => {
+    return (
+      <Chart
+        sensorId={sensor}
+        key={key}
+        values={values}
+        pred={pred}
+        samples={samples}
+      />
+    );
   };
 
   setUpdatedState = (selectedItems) => {
@@ -171,6 +200,7 @@ export class ChartDashboard extends React.Component {
     const options = this.state.options;
     const chartItems = this.state.chartItems;
     const noSignals = Object.keys(this.state.allSignals).length === 0;
+    const instantiated = this.state.instantiated;
     return (
       <div className="selector-chart-container">
         <div className="selector-container">
@@ -180,14 +210,16 @@ export class ChartDashboard extends React.Component {
             selected={selected}
             onSelectedChanged={(selected) => this.setState({ selected })}
             overrideStrings={{
-              selectSomeItems: noSignals
+              selectSomeItems: !instantiated
+                ? "Instantiating threading, please wait.."
+                : noSignals
                 ? "No signals found.."
                 : "Select signals",
               allItemsAreSelected: "Showing all signals",
               selectAll: "Select all",
             }}
             disableSearch={true}
-            isLoading={noSignals ? true : false}
+            isLoading={noSignals || !instantiated ? true : false}
           />
         </div>
         <div className="charts-container">{Object.values(chartItems)}</div>
