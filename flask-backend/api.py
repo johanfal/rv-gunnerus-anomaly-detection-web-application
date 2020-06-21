@@ -102,8 +102,8 @@ def get_signals(system_table):
 
 
 @app.route('/update_selected/<cols_str>',
-           methods=['GET', 'POST'])
-def get_values(system_table, cols_str):
+            methods=['GET', 'POST'])
+def update_selected(system_table, cols_str):
     """Updates fields based on currently selected signals and starts
     thread-based parallelism if no thread is alive."""
     columns = cols_str.split(',')  # create a list from columns string
@@ -201,7 +201,7 @@ def save_uploaded_scaler(use_sample):
 
 
 @app.route('/instantiate_thread/<system>/<input_cols>/<output_cols>',
-           methods=['GET', 'POST'])
+            methods=['GET', 'POST'])
 def initiate_thread(system, input_cols, output_cols):
     input_cols = input_cols.split(",")
     output_cols = output_cols.split(",")
@@ -247,9 +247,12 @@ class ValueThread(Thread):
         self.system = system
         self.input_cols = input_cols  # inputs used for prediction in model
         self.output_cols = output_cols  # predicted output columns of model
+        self.output_indices = self.get_output_indices()
         self.delay = INTERVAL  # frequency of updates
         # model timesteps used
         self.timesteps = model_properties['timesteps']
+        # Set initial index (database follows a not-null approach, meaning the
+        # first row index is 1):
         self.index = model_properties['timesteps'] + 1  # initial index
         # Get the input values for the first timestep-values:
         self.X_pred = self.get_first_input_values()
@@ -267,8 +270,7 @@ class ValueThread(Thread):
         input_cols = self.input_cols
         system = self.system
         global table_classes  # Delete (only when startpage is disabled)
-        # Delete (only when startpage is disabled)
-        table_classes = get_table_classes()
+        table_classes = get_table_classes() # Delete (same as above)
         with app.app_context():  # enable database access through SQLAlchemy
             X_pred = []  # Placeholder for each timestep of signal values
             for i in range(1, timesteps + 1):
@@ -282,14 +284,71 @@ class ValueThread(Thread):
         # Transform, reshape to (1, t, n), and convert to numpy array:
         return np.array([scaler.transform(X_pred)])
 
+    def get_output_indices(self):
+        """Returns a list with the position of each output column in the
+        ordered input list. During reverse transform of data (from normalized
+        to original magnitude of values) the order of the signals matters.
+        Since the original data is fetched, and can be transmitted to the
+        client before normalization, only the predicted values must be reverse
+        transformed before being sent to the client."""
+        indices = []
+        for pred_sig in self.output_cols:
+            indices.append(self.input_cols.index(pred_sig))
+        return indices
+
     def get_data(self):
         """Continuously emit information about the current database index to
         the client, which fetches data based on the index."""
+        # Create placeholder list for predicted values, which must be filled
+        # with all input columns to reverse transform properly:
+        pred_values_list = [None]*len(self.input_cols)
         while not thread_stop_event.is_set():
             with app.app_context():
+                start_time = time.time()
+                # Predict values at the next timestep:
+                pred_values = keras_model.predict(self.X_pred)
+                pred_value_counter = 0
+                for index in self.output_indices:
+                    pred_values_list[index] = pred_values[pred_value_counter]
+                    # pred_values_list[index] = pred_values[0][pred_value_counter] # This might be necessary
+                pred_values_list = scaler.inverse_transform(pred_values_list)
+                for index in self.output_indices:
+                    pred_values = list(pred_values_list[i] for i in self.output_indices)
+
+                # Load new values:
+                values = table_classes[system].query.options(
+                    load_only(*input_cols)).get(self.index).get_dict()
+                # Scale new values:
+                values = scaler.transform(values)
+                # Add new values to the end of X_pred:
+                self.X_pred[0].append(values) # this is np.array, might not work with append?
+
+                # Time used for prediction and manipulations:
+                calculation_time = time.time() - start_time
+                if calculation_time > 1: sleep_time = 0
+                else: sleep_time = self.delay - calculation_time
+                time.sleep(sleep_time)
+                self.index += 1
+
+                """
+                What you thought about going to bed:
+                The predicted value is the same as the final timestep. So if
+                X_pred is from t1 to t30, y_hat will correspond with the value
+                at t30. This means that value t30 (index 29) will have to be
+                shown together with predicted value 1. Predicted value 1 will
+                be at t30? Check out a bit more regarding self.index. Would the
+                best be to get first values for t-1, and then add the last value
+                in the actual thread? I think it would reduce the number of queries.
+                """
+
+
+
+
+
                 # values = NogvaEngines.query.options(load_only(*self.selected_fields)).get(self.index)
                 # 'ME1_BackupBatt', 'ME1_Boostpress', 'ME1_EngineSpeed','ME1_ExhaustTemp1', 'ME1_ExhaustTemp2', 'ME1_FuelRate', 'ME1_Hours','ME1_LOPress', 'ME1_LubOilTemp', 'ME1_POWER', 'ME1_StartBatt','ME1_coolantTemp'
                 # Format: (rowNums, timesteps, signals)
+                keras_model.predict(self.X_pred)
                 pred_values = []
                 values = db.session.query(
                     self.system).get(
@@ -312,8 +371,7 @@ class ValueThread(Thread):
                 # print('\n\nPred:')
                 # print(pred_vals)
                 # print('\n\n')
-                time.sleep(self.delay)
-                self.index += 1
+
         engine.dispose()
         print('Engine disposed after threading')
 
