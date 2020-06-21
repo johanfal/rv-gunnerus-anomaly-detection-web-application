@@ -313,46 +313,36 @@ class ValueThread(Thread):
                 values = table_classes[self.system].query.options(
                     load_only(*self.fetch_columns)).get(self.index).get_dict()
                 values['time'] = str(values['time'])
-                print('0--new values loaded--')
                 ordered_values = []
                 # Order values correctly according to model, and exclude time:
                 for col in self.input_cols:
                     ordered_values.append(values[col])
-                print('0--ordered_values made--')
                 # Scale new values:
                 scaled_values = scaler.transform([ordered_values])
-                print('0--ordered_values transformed to scaled_values--')
                 # Add new values to the end of X_pred:
                 self.X_pred = np.append(self.X_pred, scaled_values, axis=0)
-                print('0--appeneded scaled_values to X_pred--')
 
                 # Predict values at the next timestep (the input must be a
                 # numpy array with shape (1,timesteps, features)):
                 pred_values = keras_model.predict(np.array([self.X_pred]))
-                print('1--past prediction--')
                 pred_value_counter = 0
                 # Add predicted values to placeholder list for predictions:
                 for index in self.output_indices:
                     pred_vals_list[0][index] = pred_values[0][pred_value_counter]
-                print('2--past creating pred_vals_list--')
                 # Inverse transform predicted values:
                 pred_vals_list = scaler.inverse_transform(pred_vals_list)
-                print('3--pred_vals_list has been inverse transformed--')
                 # Add predicted values from placeholder list to values dict:
                 pred_value_counter = 0
                 for pred_col in self.output_cols:
                     pred_key = f'{pred_col}_pred'
                     values[pred_key] = self.output_indices[pred_value_counter]
-                print('4--pred_values have been extracted--')
 
                 socketio.emit('values', values)
                 self.X_pred = self.X_pred[1:]
-                print(self.X_pred.shape)
-                # Time used for prediction and manipulations:
+                # Time used for prediction, manipulations, and emission:
                 calculation_time = time.time() - start_time
                 if calculation_time > 1: sleep_time = 0
                 else: sleep_time = self.delay - calculation_time
-                print('9--sleep time calculated--')
                 time.sleep(sleep_time)
                 self.index += 1
 
