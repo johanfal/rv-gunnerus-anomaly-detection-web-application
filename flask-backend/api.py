@@ -47,7 +47,7 @@ db = SQLAlchemy(app)
 db.init_app(app)
 # Initialize Flask-SocketIO:
 socketio = SocketIO(app)
-socketio.init_app(app, cors_allowed_origins="*")
+socketio.init_app(app, cors_allowed_origins='*')
 
 INTERVAL = 1  # fetch interval from database in seconds (data frequency)
 
@@ -103,7 +103,7 @@ def get_signals(system_table):
 
 @app.route('/update_selected/<cols_str>',
             methods=['GET', 'POST'])
-def update_selected(system_table, cols_str):
+def update_selected(cols_str):
     """Updates fields based on currently selected signals and starts
     thread-based parallelism if no thread is alive."""
     columns = cols_str.split(',')  # create a list from columns string
@@ -126,7 +126,7 @@ def stop_thread():
         global thread_stop_event
         thread_stop_event = Event()
         thread_stop_event.set()
-        print(f"Upon page reload, the thread has been discontinued.")
+        print(f'Upon page reload, the thread has been discontinued.')
         return {'thread_stopped': True}
     engine.dispose()
     return {'thread_stopped': False}
@@ -203,15 +203,15 @@ def save_uploaded_scaler(use_sample):
 @app.route('/instantiate_thread/<system>/<input_cols>/<output_cols>',
             methods=['GET', 'POST'])
 def initiate_thread(system, input_cols, output_cols):
-    input_cols = input_cols.split(",")
-    output_cols = output_cols.split(",")
+    input_cols = input_cols.split(',')
+    output_cols = output_cols.split(',')
 
     global thread, thread_stop_event
     if not thread.is_alive():
-        print(f"Initiating thread...")
+        print(f'Initiating thread...')
         thread = ValueThread(system, input_cols, output_cols)
     else:
-        print(f"Attempting to connect while thread is active")
+        print(f'Attempting to connect while thread is active')
     return {'thread_instantiated': True}
 
 
@@ -246,6 +246,9 @@ class ValueThread(Thread):
         """Instantiate class object."""
         self.system = system
         self.input_cols = input_cols  # inputs used for prediction in model
+        # Variable for columns that will be queried from database:
+        self.fetch_columns = ['time']
+        self.fetch_columns.extend(self.input_cols)
         self.output_cols = output_cols  # predicted output columns of model
         self.output_indices = self.get_output_indices()
         self.delay = INTERVAL  # frequency of updates
@@ -253,7 +256,7 @@ class ValueThread(Thread):
         self.timesteps = model_properties['timesteps']
         # Set initial index (database follows a not-null approach, meaning the
         # first row index is 1):
-        self.index = model_properties['timesteps'] + 1  # initial index
+        self.index = self.timesteps  # initial index
         # Get the input values for the first timestep-values:
         self.X_pred = self.get_first_input_values()
         super(ValueThread, self).__init__()
@@ -273,7 +276,7 @@ class ValueThread(Thread):
         table_classes = get_table_classes() # Delete (same as above)
         with app.app_context():  # enable database access through SQLAlchemy
             X_pred = []  # Placeholder for each timestep of signal values
-            for i in range(1, timesteps + 1):
+            for i in range(1, timesteps):
                 ordered_values = []
                 values = table_classes[system].query.options(
                     load_only(*input_cols)).get(i).get_dict()
@@ -281,8 +284,8 @@ class ValueThread(Thread):
                     ordered_values.append(values[col])
                 # append current timestep values
                 X_pred.append(ordered_values)
-        # Transform, reshape to (1, t, n), and convert to numpy array:
-        return np.array([scaler.transform(X_pred)])
+        # Return transformed values with shape (timesteps, features):
+        return scaler.transform(X_pred)
 
     def get_output_indices(self):
         """Returns a list with the position of each output column in the
@@ -301,50 +304,59 @@ class ValueThread(Thread):
         the client, which fetches data based on the index."""
         # Create placeholder list for predicted values, which must be filled
         # with all input columns to reverse transform properly:
-        pred_values_list = [None]*len(self.input_cols)
+        pred_vals_list = [[None]*len(self.input_cols)]
         while not thread_stop_event.is_set():
             with app.app_context():
                 start_time = time.time()
-                # Predict values at the next timestep:
-                pred_values = keras_model.predict(self.X_pred)
-                pred_value_counter = 0
-                for index in self.output_indices:
-                    pred_values_list[index] = pred_values[pred_value_counter]
-                    # pred_values_list[index] = pred_values[0][pred_value_counter] # This might be necessary
-                pred_values_list = scaler.inverse_transform(pred_values_list)
-                for index in self.output_indices:
-                    pred_values = list(pred_values_list[i] for i in self.output_indices)
 
-                # Load new values:
-                values = table_classes[system].query.options(
-                    load_only(*input_cols)).get(self.index).get_dict()
+                # Query values as dictionary containing input_cols and time:
+                values = table_classes[self.system].query.options(
+                    load_only(*self.fetch_columns)).get(self.index).get_dict()
+                values['time'] = str(values['time'])
+                print('0--new values loaded--')
+                ordered_values = []
+                # Order values correctly according to model, and exclude time:
+                for col in self.input_cols:
+                    ordered_values.append(values[col])
+                print('0--ordered_values made--')
                 # Scale new values:
-                values = scaler.transform(values)
+                scaled_values = scaler.transform([ordered_values])
+                print('0--ordered_values transformed to scaled_values--')
                 # Add new values to the end of X_pred:
-                self.X_pred[0].append(values) # this is np.array, might not work with append?
+                self.X_pred = np.append(self.X_pred, scaled_values, axis=0)
+                print('0--appeneded scaled_values to X_pred--')
 
+                # Predict values at the next timestep (the input must be a
+                # numpy array with shape (1,timesteps, features)):
+                pred_values = keras_model.predict(np.array([self.X_pred]))
+                print('1--past prediction--')
+                pred_value_counter = 0
+                # Add predicted values to placeholder list for predictions:
+                for index in self.output_indices:
+                    pred_vals_list[0][index] = pred_values[0][pred_value_counter]
+                print('2--past creating pred_vals_list--')
+                # Inverse transform predicted values:
+                pred_vals_list = scaler.inverse_transform(pred_vals_list)
+                print('3--pred_vals_list has been inverse transformed--')
+                # Add predicted values from placeholder list to values dict:
+                pred_value_counter = 0
+                for pred_col in self.output_cols:
+                    pred_key = f'{pred_col}_pred'
+                    values[pred_key] = self.output_indices[pred_value_counter]
+                print('4--pred_values have been extracted--')
+
+                socketio.emit('values', values)
+                self.X_pred = self.X_pred[1:]
+                print(self.X_pred.shape)
                 # Time used for prediction and manipulations:
                 calculation_time = time.time() - start_time
                 if calculation_time > 1: sleep_time = 0
                 else: sleep_time = self.delay - calculation_time
+                print('9--sleep time calculated--')
                 time.sleep(sleep_time)
                 self.index += 1
 
-                """
-                What you thought about going to bed:
-                The predicted value is the same as the final timestep. So if
-                X_pred is from t1 to t30, y_hat will correspond with the value
-                at t30. This means that value t30 (index 29) will have to be
-                shown together with predicted value 1. Predicted value 1 will
-                be at t30? Check out a bit more regarding self.index. Would the
-                best be to get first values for t-1, and then add the last value
-                in the actual thread? I think it would reduce the number of queries.
-                """
-
-
-
-
-
+            """old
                 # values = NogvaEngines.query.options(load_only(*self.selected_fields)).get(self.index)
                 # 'ME1_BackupBatt', 'ME1_Boostpress', 'ME1_EngineSpeed','ME1_ExhaustTemp1', 'ME1_ExhaustTemp2', 'ME1_FuelRate', 'ME1_Hours','ME1_LOPress', 'ME1_LubOilTemp', 'ME1_POWER', 'ME1_StartBatt','ME1_coolantTemp'
                 # Format: (rowNums, timesteps, signals)
@@ -371,7 +383,7 @@ class ValueThread(Thread):
                 # print('\n\nPred:')
                 # print(pred_vals)
                 # print('\n\n')
-
+            """
         engine.dispose()
         print('Engine disposed after threading')
 
