@@ -20,6 +20,18 @@ const DEFAULT_X_TICKS = 30;
 export class Chart extends React.Component {
   constructor(props) {
     super(props);
+    var threshold = 0;
+    var ofx = 0;
+    if (this.props.samples) {
+      if (this.props.sensorId === "me1_exhausttemp1") {
+        ofx = 0;
+        threshold = 5;
+      }
+      if (this.props.sensorId === "me1_exhausttemp2") {
+        ofx = 0;
+        threshold = 5;
+      }
+    }
     this.state = {
       data: [],
       lastTimeStr: null,
@@ -27,7 +39,8 @@ export class Chart extends React.Component {
       connected: false,
       error: "",
       status: null,
-      threshold: 0,
+      threshold: threshold,
+      ofx: ofx,
     };
     this.seriesList = [
       {
@@ -100,34 +113,36 @@ export class Chart extends React.Component {
       return { lastTimeStr: null, lastDateStr: "", connected: false };
     }
     const values = nextProps.values;
-
+    const threshold = prevState.threshold;
     const datetime = new Date(values.time);
     const timestamp = Date.parse(datetime);
     const dateStr = datetime.toLocaleDateString("en-GB");
     const timeStr = datetime.toLocaleTimeString("en-GB");
-    var lastTimestamp = "";
     const data = prevState.data;
+    const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
+    var lastTimestamp = "";
     if (prevState.data.length > 0) {
       lastTimestamp = prevState.data[prevState.data.length - 1].timestamp;
     }
 
     if (timestamp !== lastTimestamp) {
-      const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
-      const predValue =
-        values.signal + Math.floor(Math.random() * 100) / 100 - 0.5;
       const newValues = {
         timestamp: timestamp,
         value: values.signal,
       };
       if (nextProps.pred) {
-        newValues["pred"] = predValue;
+        newValues["pred"] = values.pred + prevState.ofx;
         newValues["anomaly"] =
-          Math.abs(predValue - values.signal) > 0.25 ? 1 : 0;
+          threshold === 0
+            ? 0
+            : Math.abs(values.signal - newValues.pred) > threshold
+            ? 1
+            : 0;
+        // Math.abs(predValue - values.signal) > 0.25 ? 1 : 0;
         // Math.abs(predValue-values.signal) > this.state.threshold
       }
 
       data.push(newValues);
-
       return {
         data: data.slice(pointsToStore),
         connected: true,
@@ -137,7 +152,7 @@ export class Chart extends React.Component {
       };
     } else {
       return {
-        data: data,
+        data: data.slice(pointsToStore),
         connected: true,
         error: false,
         lastDateStr: dateStr,
@@ -210,7 +225,9 @@ export class Chart extends React.Component {
   updateThreshold = (event) => {
     event.preventDefault();
     const thresholdValue = this.thresholdField.value;
-    this.setState({ threshold: thresholdValue });
+    if (thresholdValue !== "") {
+      this.setState({ threshold: thresholdValue });
+    }
   };
 
   // Render Chart component
@@ -273,14 +290,13 @@ export class Chart extends React.Component {
                 className="threshold-form"
                 onSubmit={(event) => this.updateThreshold(event)}
               >
-                Choose threshold for anomalies:
+                Anomaly threshold:
                 <input
                   className="threshold-input"
                   type="number"
                   name="threshold"
                   autocomplete="off"
                   step="0.01"
-                  placeholder="0"
                   ref={(threshold) => (this.thresholdField = threshold)}
                   onClick={(event) => this.updateThreshold(event)}
                 />
