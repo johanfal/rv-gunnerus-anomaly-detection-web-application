@@ -24,11 +24,11 @@ export class Chart extends React.Component {
     var ofx = 0;
     if (this.props.samples) {
       if (this.props.sensorId === "me1_exhausttemp1") {
-        ofx = 0;
+        ofx = 1.5;
         threshold = 5;
       }
       if (this.props.sensorId === "me1_exhausttemp2") {
-        ofx = 0;
+        ofx = 10;
         threshold = 5;
       }
     }
@@ -41,6 +41,8 @@ export class Chart extends React.Component {
       status: null,
       threshold: threshold,
       ofx: ofx,
+      predToggled: true,
+      anomToggled: true,
     };
     this.seriesList = [
       {
@@ -132,14 +134,9 @@ export class Chart extends React.Component {
       };
       if (nextProps.pred) {
         newValues["pred"] = values.pred + prevState.ofx;
+        newValues["deviation"] = Math.abs(values.signal - newValues.pred);
         newValues["anomaly"] =
-          threshold === 0
-            ? 0
-            : Math.abs(values.signal - newValues.pred) > threshold
-            ? 1
-            : 0;
-        // Math.abs(predValue - values.signal) > 0.25 ? 1 : 0;
-        // Math.abs(predValue-values.signal) > this.state.threshold
+          threshold === 0 ? 0 : newValues["deviation"] > threshold ? 1 : 0;
       }
 
       data.push(newValues);
@@ -169,15 +166,6 @@ export class Chart extends React.Component {
     this.updateChart();
   }
 
-  // Reading consists of:
-  // - Timestamp
-  // - Value
-  // - Z-score
-
-  // Modifications:
-  // - Anomaly
-  // - Predicted value
-
   // Handle window focus
   attachFocusWatcher() {
     window.focused = true;
@@ -189,10 +177,6 @@ export class Chart extends React.Component {
     };
   }
 
-  /**
-   * `highestValueInView` is used to calculate out the highest value in the currently
-   * shown data in order to normalize the zscores 0/1 to it
-   */
   updateChart() {
     const xTicks = Math.max(
       this.state.data.length - (this.props["x-ticks"] || DEFAULT_X_TICKS),
@@ -218,6 +202,11 @@ export class Chart extends React.Component {
   }
 
   toggleSeries = ({ target }) => {
+    if (target.id === "anomaly") {
+      this.setState({ anomToggled: !this.state.anomToggled });
+    } else if (target.id === "prediction") {
+      this.setState({ predToggled: !this.state.predToggled });
+    }
     target.classList.toggle("hidden");
     this.tsChart.toggleSeries(target.id);
   };
@@ -261,8 +250,16 @@ export class Chart extends React.Component {
               onClick={this.toggleSeries}
             >
               <i className="box"></i>
-              {series.label === "Anomaly"
-                ? `${series.label} (threshold: ${this.state.threshold})`
+              {series.label === "Anomaly" && this.state.anomToggled
+                ? `${series.label} (T: ${this.state.threshold})`
+                : series.label === "Prediction" && this.state.predToggled
+                ? `${series.label} (dev: ${
+                    this.state.data.length > 0
+                      ? this.state.data[this.state.data.length - 1][
+                          "deviation"
+                        ].toFixed(2)
+                      : 0
+                  })`
                 : series.label}
             </span>
           );
@@ -271,8 +268,11 @@ export class Chart extends React.Component {
       <span
         className={"timestamp " + (this.state.connected ? "success" : "danger")}
       >
-        {this.state.connected ? "" : "Last reading was at "}
-        {`${this.state.lastDateStr} ${this.state.lastTimeStr}`}
+        {this.state.connected
+          ? `${this.state.lastDateStr} ${this.state.lastTimeStr}`
+          : !this.state.lastTimeStr
+          ? "No readings registered.."
+          : `Last reading was at ${this.state.lastDateStr} ${this.state.lastTimeStr}`}
       </span>
 
       {this.props.pred
@@ -290,7 +290,7 @@ export class Chart extends React.Component {
                 className="threshold-form"
                 onSubmit={(event) => this.updateThreshold(event)}
               >
-                Anomaly threshold:
+                Anomaly threshold (T):
                 <input
                   className="threshold-input"
                   type="number"
