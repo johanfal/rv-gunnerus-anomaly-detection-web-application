@@ -8,7 +8,7 @@ export const Header = () => {
     <div className="header-container">
       <div className="homebtn-container">
         <button className="homebtn" onClick={onHomeClick}>
-          <i className="home-icon" class="fa fa-home" />
+          <i className="home-icon" className="fa fa-home" />
         </button>
       </div>
       <h1>ANOMALY DETECTION</h1>
