@@ -181,18 +181,17 @@ button#continue-with-IO:enabled:active {
 }
 
 div.homebtn-container {
-  margin: 10px;
-  margin-bottom: -40px;
+  margin: 20px 10px -40px 10px;
 }
 
 button.homebtn {
-  font-size: 25px;
+  font-size: 30px;
   color: white;
   background-color: $green-hex;
   border-radius: 3px;
   border: none;
   outline: none;
-  transition: 0.2s;
+  transition: 0.3s;
 }
 
 button.homebtn:hover {
