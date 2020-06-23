@@ -10,7 +10,7 @@ export class ChartDashboard extends React.Component {
       selected: [], // signals
       options: [], // multi-select options
       chartItems: {}, // rendered charts
-      sioStatus: false, // socket status
+      connected: false, // connection status of Socket IO
       allSignals: [], // all signals available for visualization
       thread_created: false, // boolean if thread has been created
       error: false, // handle threading error
@@ -38,16 +38,13 @@ export class ChartDashboard extends React.Component {
       (response) =>
         response.json().then((data) => {
           if (data.thread_created) {
-            this.connect();
             this.setSignalSelection();
             this.setState({
               thread_created: data.thread_created,
-              connected: true,
             });
           } else {
             this.setState({
               thread_created: data.thread_created,
-              connected: false,
               error: true,
             });
           }
@@ -103,10 +100,10 @@ export class ChartDashboard extends React.Component {
     */
     // Booleans to determine if state and Socket IO status will be updated:
     let updateState = false;
-    let updateSioStatus = false;
+    let updateConnectionStatus = false;
     // Current parameters:
     const selected = this.state.selected; // selected
-    const sioStatus = this.state.sioStatus; // Socket IO status
+    const connected = this.state.connected; // connection status
     let chartItems = this.state.chartItems; // Chart component items
     // Determine newly added and/or deleted signals:
     const added = selected.filter((sig) => !prevState.selected.includes(sig));
@@ -117,17 +114,13 @@ export class ChartDashboard extends React.Component {
     // If a signal has been newly selected:
     if (added.length > 0) {
       // If Socket IO is not connected:
-      if (!sioStatus) {
-        updateSioStatus = true;
+      if (!connected) {
+        updateConnectionStatus = true;
       }
       updateState = true; // state needs to be updated to reflect changes
 
       // Add newly selected charts:
-      chartItems = this.addNewCharts(
-        added,
-        chartItems,
-        !this.state.sioStatus
-      );
+      chartItems = this.addNewCharts(added, chartItems, connected);
     }
 
     // If a signal has been newly deselected:
@@ -138,18 +131,18 @@ export class ChartDashboard extends React.Component {
     }
 
     if (updateState) {
-      this.setUpdatedState(chartItems, updateSioStatus);
+      this.setUpdatedState(chartItems, updateConnectionStatus);
     }
   }
 
-  addChart = (sensor, key, pred, samples, disconnect, values) => {
+  addChart = (sensor, key, pred, samples, connected, values) => {
     /*
       Returns a Chart component based on defined properties:
         - sensor: name of the current sensor
         - key: unique identifier
         - pred: boolean, true if the signal is part of predicted outputs
         - samples: boolean, true if sample files are used
-        - disconnect: boolean, true if signal is disconnected
+        - connected: boolean, true if signal is connected and receiving values
         - values: latest id, timestep, reading, and pred (if applicable)
     */
     return (
@@ -158,13 +151,13 @@ export class ChartDashboard extends React.Component {
         key={key}
         pred={pred}
         samples={samples}
-        disconnect={disconnect}
+        connected={connected}
         values={values}
       />
     );
   };
 
-  addNewCharts = (newlySelected, selectedItems, disconnect) => {
+  addNewCharts = (newlySelected, selectedItems, connected) => {
     /*
       Append newly selected charts to selectedItems with correct parameters
       necessary for the AddChart() function.
@@ -185,7 +178,7 @@ export class ChartDashboard extends React.Component {
         sig,
         isSignalToPredict,
         this.sampleFiles,
-        disconnect,
+        connected,
         values
       );
     }
@@ -221,17 +214,20 @@ export class ChartDashboard extends React.Component {
       Determines whether or not the values last received are valid or false.
       If the values are valid, the storeReading() function is called.
     */
+    var connected = this.state.connected;
     if (values === false) {
       // If disconnected, update the Socket IO status:
+      this.socket.disconnect();
       this.setState({
-        sioStatus: false,
+        connected: false,
       });
+      connected = false;
     }
     // If connected, update and store reading in Chart items:
-    this.storeReading(values, true);
+    this.storeReading(values, connected);
   };
 
-  storeReading = (values, disconnect) => {
+  storeReading = (values, connected) => {
     /*
       Update Charts based on last received values from API server.
     */
@@ -249,7 +245,7 @@ export class ChartDashboard extends React.Component {
         sig,
         isSignalToPredict,
         this.sampleFiles,
-        disconnect,
+        connected,
         {
           id: id,
           time: time,
@@ -263,20 +259,21 @@ export class ChartDashboard extends React.Component {
     this.setState({ chartItems: chartItems });
   };
 
-  setUpdatedState = (selectedItems, updateSioStatus) => {
+  setUpdatedState = (selectedItems, updateConnectionStatus) => {
     /*
       If a new signal has been newly selected or deselected, update the
-      chart items to reflect these changes. If the Socket IO status needs to
-      be changed, the sioStatus should become true, and the threading in the
-      API client (enabling parallel multi-processing) should be started.
+      chart items to reflect these changes. If the connection status needs to
+      be changed, connected is set to true, and the threading used in the
+      API client (enabling parallel multi-processing) will be started.
       Consecutively, the client should start listening for new values through
       the Socket IO connection. This is established through the getValues()
       function.
     */
-    if (updateSioStatus) {
+    if (updateConnectionStatus) {
+      this.connect();
       this.setState({
         chartItems: selectedItems,
-        sioStatus: true,
+        connected: true,
       });
       fetch("start_thread"); // start threading for parallelism
       this.getValues(); // fetch newly emitted values from server
