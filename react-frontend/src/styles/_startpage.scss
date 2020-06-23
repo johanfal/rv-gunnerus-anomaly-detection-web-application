@@ -179,3 +179,29 @@ button#continue-with-IO:enabled:active {
   font-size: 14px;
   line-height: 20px;
 }
+
+div.homebtn-container {
+  margin: 10px;
+  margin-bottom: -40px;
+}
+
+button.homebtn {
+  font-size: 25px;
+  color: white;
+  background-color: $green-hex;
+  border-radius: 3px;
+  border: none;
+  outline: none;
+  transition: 0.2s;
+}
+
+button.homebtn:hover {
+  color: #336e68;
+  background-color: white;
+  cursor: pointer;
+}
+
+button.homebtn:active {
+  color: #1b3835;
+  background-color: white;
+}

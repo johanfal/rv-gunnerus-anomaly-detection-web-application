@@ -1,8 +1,16 @@
 import React from "react";
 
 export const Header = () => {
+  const onHomeClick = () => {
+    window.location.reload(true);
+  };
   return (
     <div className="header-container">
+      <div className="homebtn-container">
+        <button className="homebtn" onClick={onHomeClick}>
+          <i className="home-icon" class="fa fa-home" />
+        </button>
+      </div>
       <h1>ANOMALY DETECTION</h1>
       <div id="link-container">
         <h4 className="repotitle">GITHUB REPOSITORIES</h4>

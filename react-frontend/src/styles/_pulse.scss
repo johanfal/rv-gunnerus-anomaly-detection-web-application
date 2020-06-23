@@ -6,14 +6,11 @@
   border-radius: 50%;
 }
 
-
 .success .pulse {
   animation: pulse 2s infinite;
-  background: $dark-green-hex;
-  box-shadow: 0 0 0 $dark-green-hex;
+  background: $light-green-hex;
+  box-shadow: 0 0 0 $light-green-hex;
 }
-
-
 
 .danger .pulse {
   animation: none;

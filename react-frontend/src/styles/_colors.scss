@@ -1,14 +1,14 @@
 /* Color Theme Swatches form Adobe color */
 $dark-red-hex: rgb(195, 10, 25);
-$red-hex: #D90D32;
+$red-hex: #d90d32;
 $gray-hex: #686868;
 $green-hex: #25504c;
-$dark-green-hex: rgb(11, 116, 105);
+$light-green-hex: rgb(11, 116, 105);
 $orange-hex: rgb(230, 112, 2);
 
 // Colors
 .success {
-  color: $dark-green-hex;
+  color: $light-green-hex;
 }
 
 .danger {
