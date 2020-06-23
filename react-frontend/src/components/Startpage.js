@@ -1,8 +1,9 @@
 import React from "react";
 import "../styles/main.scss";
-import Upload from "./Upload";
-import ModelSpecifications from "./ModelSpecifications";
 import ChartDashboard from "./ChartDashboard";
+import Header from "./Header";
+import ModelSpecifications from "./ModelSpecifications";
+import Upload from "./Upload";
 
 export class Startpage extends React.Component {
   constructor(props) {
@@ -62,7 +63,7 @@ export class Startpage extends React.Component {
     }
   };
 
-  checkFileUploades = () => {
+  checkFileUploads = () => {
     if (!!this.state.modelFilename && !!this.state.scalerFilename) {
       return true;
     }
@@ -108,24 +109,27 @@ export class Startpage extends React.Component {
   };
 
   render() {
-    const showSelectionParameters = this.checkFileUploades();
+    const showSelectionParameters = this.checkFileUploads();
     const settingsComplete = this.state.settingsComplete;
     const useSampleFiles = this.state.useSampleFiles;
     const modelProperties = this.state.modelProperties;
-    const selectedSystem = this.state.selectedSystem[0];
-    const selectedInputs = this.state.selectedInputs;
-    const selectedOutputs = this.state.selectedOutputs;
-    const modelFilename = this.state.modelFilename;
-    const modelTimesteps = this.state.modelProperties.timesteps;
-    const scalerFilename = this.state.scalerFilename;
+    // const selectedSystem = this.state.selectedSystem[0];
+    // const selectedInputs = this.state.selectedInputs;
+    // const selectedOutputs = this.state.selectedOutputs;
+    // const modelFilename = this.state.modelFilename;
+    // const modelTimesteps = this.state.modelProperties.timesteps;
+    // const scalerFilename = this.state.scalerFilename;
     return (
       <div className="startpage">
+        <Header />
+
         {settingsComplete ? ( // change ot !settingsComplete to bring back selections
           [
             <div>
               <div id="upload-content">
                 <Upload
                   id="keras-model"
+                  key="keras-model-upload"
                   name="Keras model"
                   format=".HDF5,.h5"
                   sendFilename={(filename, id) =>
@@ -139,6 +143,7 @@ export class Startpage extends React.Component {
                 />
                 <Upload
                   id="scaler"
+                  key="scaler-upload"
                   name="scaler"
                   format=".pckl"
                   sendFilename={(filename, id) =>
@@ -169,7 +174,6 @@ export class Startpage extends React.Component {
                             </div>
                                 <a className="question-tooltip">?</a>
                         </div> */}
-              <div className="model-specifications">{/* <Threshold /> */}</div>
               <div className="model-selectors-container">
                 {showSelectionParameters ? (
                   <ModelSpecifications
