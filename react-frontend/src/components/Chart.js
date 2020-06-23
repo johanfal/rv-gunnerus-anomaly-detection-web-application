@@ -111,7 +111,7 @@ export class Chart extends React.Component {
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
-    if (nextProps.values.time === undefined) {
+    if (nextProps.values.time === null) {
       return { lastTimeStr: null, lastDateStr: "", connected: false };
     }
     const values = nextProps.values;
@@ -225,7 +225,9 @@ export class Chart extends React.Component {
       <h2>
         {!this.state.lastTimeStr
           ? "Connecting..."
-          : `${this.props.sensorId.toUpperCase()}: ${this.props.values.signal}`}
+          : `${this.props.sensorId.toUpperCase()}: ${
+              this.props.values.signal
+            }`}
       </h2>
 
       <span
@@ -266,7 +268,9 @@ export class Chart extends React.Component {
         })}
       </div>
       <span
-        className={"timestamp " + (this.state.connected ? "success" : "danger")}
+        className={
+          "timestamp " + (this.state.connected ? "success" : "danger")
+        }
       >
         {this.state.connected
           ? `${this.state.lastDateStr} ${this.state.lastTimeStr}`
@@ -295,7 +299,7 @@ export class Chart extends React.Component {
                   className="threshold-input"
                   type="number"
                   name="threshold"
-                  autocomplete="off"
+                  autoComplete="off"
                   step="0.01"
                   ref={(threshold) => (this.thresholdField = threshold)}
                   onClick={(event) => this.updateThreshold(event)}
