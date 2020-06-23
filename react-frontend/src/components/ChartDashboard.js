@@ -3,9 +3,6 @@ import MultiSelect from "@khanacademy/react-multi-select";
 import Chart from "./Chart";
 import io from "socket.io-client";
 
-// You are struggling to update index within the compDidUpdate function.
-// Is there a better way to do this?
-
 export class ChartDashboard extends React.Component {
   constructor(props) {
     super(props);
@@ -15,36 +12,62 @@ export class ChartDashboard extends React.Component {
       chartItems: {}, // rendered charts
       sioStatus: false, // socket status
       allSignals: [], // all signals available for visualization
-      instantiated: false, // if thread has been instantiated
+      thread_created: false, // boolean if thread has been created
+      error: false, // handle threading error
     };
+    // Property definitions from parent:
     this.system = this.props.system;
     this.inputs = this.props.inputs;
     this.outputs = this.props.outputs;
     this.timesteps = this.props.modelTimesteps;
     this.sampleFiles = this.props.sampleFiles;
   }
-  socket;
+
   // If component is succesfully mounted
   componentDidMount() {
-    fetch("keras_model/true");
-    fetch("scaler/true");
+    fetch(`keras_model/${this.sampleFiles}`); // fetch model from server API
+    fetch(`scaler/${this.sampleFiles}`); // fetch scaler from server API
+    // Convert inputs and outputs to strings for easier parsing to API server:
     const strInputs = this.inputs.join(",");
     const strOutputs = this.outputs.join(",");
+    this.onReload(); // handle window reload
 
-    fetch(`instantiate_thread/${this.system}/${strInputs}/${strOutputs}`).then(
+    // Start threading object in API, and generate the first input values to
+    // the prediction model:
+    fetch(`create_thread/${this.system}/${strInputs}/${strOutputs}`).then(
       (response) =>
         response.json().then((data) => {
-          this.setState({ instantiated: data.thread_instantiated });
+          if (data.thread_created) {
+            this.connect();
+            this.setSignalSelection();
+            this.setState({
+              thread_created: data.thread_created,
+              connected: true,
+            });
+          } else {
+            this.setState({
+              thread_created: data.thread_created,
+              connected: false,
+              error: true,
+            });
+          }
         })
     );
-    this.onReload(); // call reload function
-    this.setSignalSelection(); // get list of signals based on API call to database
   }
 
-  getStatus = (obj) => Object.keys(obj).length > 0;
+  connect = () => {
+    /*
+      Establish conenction between server and client through Socket IO
+      websocket.
+    */
+    this.socket = io.connect(`/?system=${this.system}`);
+  };
 
-  // Restart API thread if the page is reloaded
   onReload = () => {
+    /*
+      Restart necessary parts of the API threading and socket connections upon
+      reloading the browser window.
+    */
     if (window.performance) {
       if (performance.navigation.type === 1) {
         fetch("reload"); // stop thread activity through API call
@@ -53,154 +76,233 @@ export class ChartDashboard extends React.Component {
   };
 
   setSignalSelection = () => {
+    /*
+      Get signals based on inputs and outputs in the model parameters.
+    */
     const options = this.state.options;
     const outputs = this.outputs;
+    // Non-repeating union of signals:
     const allSignals = [...new Set([...this.inputs, ...this.outputs])];
     for (let signal of allSignals) {
       options.push({
-        label: outputs.includes(signal)
-          ? `${signal} (with prediction)`
-          : signal,
-        value: signal,
+        label: outputs.includes(signal) // if signal will be predicted
+          ? `${signal} (with prediction)` // label with prediction
+          : signal, // label without prediction
+        value: signal, // value used as access key
       });
     }
     this.setState({
-      options: options,
-      allSignals: allSignals,
+      options: options, // update options for multi-select dropdown menu
+      allSignals: allSignals, // set all signals
     });
   };
 
-  connect = () => {
-    this.socket = io.connect(`/?system=${this.system}`);
-  };
-
   componentDidUpdate(_prevProps, prevState) {
-    let updateState = false; // affects useState at end of lifecycle method
-    const selected = this.state.selected;
-    const sioStatus = this.state.sioStatus;
-    let chartItems = this.state.chartItems;
+    /*
+      Handle changes to component states before rerender.
+    */
+    // Booleans to determine if state and Socket IO status will be updated:
+    let updateState = false;
+    let updateSioStatus = false;
+    // Current parameters:
+    const selected = this.state.selected; // selected
+    const sioStatus = this.state.sioStatus; // Socket IO status
+    let chartItems = this.state.chartItems; // Chart component items
+    // Determine newly added and/or deleted signals:
     const added = selected.filter((sig) => !prevState.selected.includes(sig));
-    const deleted = prevState.selected.filter((sig) => !selected.includes(sig));
+    const deleted = prevState.selected.filter(
+      (sig) => !selected.includes(sig)
+    );
 
-    this.manageSocketConnection(sioStatus, prevState.sioStatus);
-
-    // If a signal is selected
+    // If a signal has been newly selected:
     if (added.length > 0) {
-      updateState = true;
-      chartItems = this.addNewCharts(added, chartItems);
-    }
-
-    // If a signal is deselected
-    if (deleted.length > 0) {
-      updateState = true;
-      chartItems = this.deleteUnselectedCharts(deleted, chartItems);
-    }
-
-    // Update socketIO connection or disconnection
-    if (sioStatus) {
-      if (added.length > 0 || deleted.length > 0 || prevState.modified) {
-        this.socket.disconnect();
-        this.connect();
+      // If Socket IO is not connected:
+      if (!sioStatus) {
+        updateSioStatus = true;
       }
+      updateState = true; // state needs to be updated to reflect changes
+
+      // Add newly selected charts:
+      chartItems = this.addNewCharts(
+        added,
+        chartItems,
+        !this.state.sioStatus
+      );
     }
 
-    // If socketIO is connected, get values
-    if (sioStatus) {
-      this.getValues(selected);
+    // If a signal has been newly deselected:
+    if (deleted.length > 0) {
+      updateState = true; // state needs to be updated to reflect changes
+      // Delete newly deselected charts:
+      chartItems = this.deleteDeselectedCharts(deleted, chartItems);
     }
 
     if (updateState) {
-      this.setUpdatedState(chartItems);
+      this.setUpdatedState(chartItems, updateSioStatus);
     }
   }
 
-  manageSocketConnection = (currentStatus, previousStatus) => {
-    if (currentStatus !== previousStatus) {
-      currentStatus ? this.connect() : this.socket.disconnect();
-    }
+  addChart = (sensor, key, pred, samples, disconnect, values) => {
+    /*
+      Returns a Chart component based on defined properties:
+        - sensor: name of the current sensor
+        - key: unique identifier
+        - pred: boolean, true if the signal is part of predicted outputs
+        - samples: boolean, true if sample files are used
+        - disconnect: boolean, true if signal is disconnected
+        - values: latest id, timestep, reading, and pred (if applicable)
+    */
+    return (
+      <Chart
+        sensorId={sensor}
+        key={key}
+        pred={pred}
+        samples={samples}
+        disconnect={disconnect}
+        values={values}
+      />
+    );
   };
 
-  addNewCharts = (newlySelected, selectedItems) => {
+  addNewCharts = (newlySelected, selectedItems, disconnect) => {
+    /*
+      Append newly selected charts to selectedItems with correct parameters
+      necessary for the AddChart() function.
+    */
     for (let sig of newlySelected) {
+      // If current signal is an output column in the prediction model:
       const isSignalToPredict = this.outputs.includes(sig); // boolean
+      // Set initial values as undefined:
+      const values = {
+        id: null,
+        time: null,
+        signal: null,
+        pred: null,
+      };
+      // Add current signal from newly selected as a new chart:
       selectedItems[sig] = this.addChart(
         sig,
         sig,
         isSignalToPredict,
         this.sampleFiles,
-        {
-          id: undefined,
-          time: undefined,
-          signal: undefined,
-        }
+        disconnect,
+        values
       );
     }
     return selectedItems;
   };
 
-  deleteUnselectedCharts = (newlyDeselected, selectedItems) => {
+  deleteDeselectedCharts = (newlyDeselected, selectedItems) => {
+    /*
+      Deleted newly deselected chart from selectedItems object
+    */
     for (let sig of newlyDeselected) {
       delete selectedItems[sig];
     }
     return selectedItems;
   };
 
-  getValues = (selected) => {
-    if (selected.length > 0) {
-      fetch(`/update_selected/${selected.join()}`);
-      this.socket.on("values", (values) => this.storeReading(values));
+  getValues = () => {
+    /*
+      Socket IO call to API server, which fetches data each time the server
+      emits new values. When new values are received, the values are sent
+      to the checkReading() function immediately. The values include columns
+      for id, time, and all relevant signals. If the signals are part of the
+      predicted outputs, the predicted values of these signals are also
+      included with a key suffix of "_pred".
+    */
+    if (this.state.selected.length > 0) {
+      this.socket.on("values", (values) => this.checkReading(values));
     }
   };
 
-  storeReading = (values) => {
+  checkReading = (values) => {
+    /*
+      Determines whether or not the values last received are valid or false.
+      If the values are valid, the storeReading() function is called.
+    */
+    if (values === false) {
+      // If disconnected, update the Socket IO status:
+      this.setState({
+        sioStatus: false,
+      });
+    }
+    // If connected, update and store reading in Chart items:
+    this.storeReading(values, true);
+  };
+
+  storeReading = (values, disconnect) => {
+    /*
+      Update Charts based on last received values from API server.
+    */
     var chartItems = {};
     const selected = this.state.selected;
     const time = values.time;
     const id = values.id;
     for (let sig of selected) {
+      // If current signal is an output column in the prediction model:
       const isSignalToPredict = this.outputs.includes(sig); // boolean
+
+      // Add current signal as a new Chart with updated values:
       chartItems[sig] = this.addChart(
         sig,
         sig,
         isSignalToPredict,
         this.sampleFiles,
+        disconnect,
         {
           id: id,
           time: time,
           signal: values[sig],
+          // Add prediction signal if isSignalToPredict is true:
           pred: isSignalToPredict ? values[`${sig}_pred`] : null,
         }
       );
     }
+    // Update chartItems state with new values:
     this.setState({ chartItems: chartItems });
   };
 
-  addChart = (sensor, key, pred, samples, values) => {
-    return (
-      <Chart
-        sensorId={sensor}
-        key={key}
-        values={values}
-        pred={pred}
-        samples={samples}
-      />
-    );
+  setUpdatedState = (selectedItems, updateSioStatus) => {
+    /*
+      If a new signal has been newly selected or deselected, update the
+      chart items to reflect these changes. If the Socket IO status needs to
+      be changed, the sioStatus should become true, and the threading in the
+      API client (enabling parallel multi-processing) should be started.
+      Consecutively, the client should start listening for new values through
+      the Socket IO connection. This is established through the getValues()
+      function.
+    */
+    if (updateSioStatus) {
+      this.setState({
+        chartItems: selectedItems,
+        sioStatus: true,
+      });
+      fetch("start_thread"); // start threading for parallelism
+      this.getValues(); // fetch newly emitted values from server
+    } else {
+      this.setState({
+        chartItems: selectedItems,
+      });
+    }
   };
 
-  setUpdatedState = (selectedItems) => {
-    this.setState({
-      chartItems: selectedItems,
-      sioStatus: this.getStatus(selectedItems),
-      modified: true,
-    });
-  };
+  componentWillUnmount() {
+    /*
+      Handle component termination
+    */
+    this.socket.disconnect();
+    fetch("stop_thread");
+  }
 
+  // Render component:
   render() {
     const selected = this.state.selected;
     const options = this.state.options;
     const chartItems = this.state.chartItems;
+    const error = this.state.error;
     const noSignals = Object.keys(this.state.allSignals).length === 0;
-    const instantiated = this.state.instantiated;
+    const thread_created = this.state.thread_created;
     return (
       <div className="selector-chart-container">
         <div className="selector-container">
@@ -210,16 +312,19 @@ export class ChartDashboard extends React.Component {
             selected={selected}
             onSelectedChanged={(selected) => this.setState({ selected })}
             overrideStrings={{
-              selectSomeItems: !instantiated
-                ? "Instantiating threading, please wait.."
-                : noSignals
-                ? "No signals found.."
-                : "Select signals",
+              selectSomeItems:
+                error && !thread_created
+                  ? "Failed to create threading. Please reload the page"
+                  : !thread_created
+                  ? "Initializing, please wait.."
+                  : noSignals
+                  ? "No signals found.."
+                  : "Select signals",
               allItemsAreSelected: "Showing all signals",
               selectAll: "Select all",
             }}
             disableSearch={true}
-            isLoading={noSignals || !instantiated ? true : false}
+            isLoading={noSignals || !thread_created ? true : false}
           />
         </div>
         <div className="charts-container">{Object.values(chartItems)}</div>
