@@ -63,15 +63,14 @@ INTERVAL = 1  # fetch interval from database in seconds (data frequency)
     model_properties,
     n_input_columns,
     scaler,
-    table_classes,
     timesteps,
     X_pred,
     X_tran,
-] = [None] * 8
+] = [None] * 7
 
 thread = Thread()  # define thread object
 thread_stop_event = Event()  # define threading-event (used for termination)
-
+table_classes = get_table_classes() # define table of models from models.py
 
 @app.route('/')
 def index():
