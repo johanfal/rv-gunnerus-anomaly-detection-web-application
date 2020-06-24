@@ -6,12 +6,14 @@ export class ModelSpecifications extends React.Component {
   constructor(props) {
     super(props);
     if (props.useSampleFiles) {
+      // Set selected to Nogva Engines if sample files are used:
       this.state = {
         options: [],
         selected: ["Nogva Engines"],
         selectedInputs: [],
         selectedOutputs: [],
       };
+      // Send selected to Startpage parent:
       this.props.sendSystemUpdate(this.state.selected);
     } else {
       this.state = {
@@ -21,12 +23,14 @@ export class ModelSpecifications extends React.Component {
         selectedOutputs: [],
       };
     }
-    this.maxSelect = 1;
+    this.maxSelect = 1; // maximum number of systems that can be selected
     this.onSelectedInput = this.onSelectedInput.bind(this);
     this.onSelectedOutput = this.onSelectedOutput.bind(this);
   }
 
+  // If component is succesfully mounted
   componentDidMount() {
+    // Get all systems from database by calling 'systems' route in API:
     fetch("systems").then((response) =>
       response.json().then((data) => {
         let options = [];
@@ -34,18 +38,21 @@ export class ModelSpecifications extends React.Component {
         let optionsDisabled = [];
         for (let [system, hasData] of Object.entries(data.systems)) {
           if (hasData) {
+            // If system has data, add to enabled list:
             optionsEnabled.push({
               label: hasData ? system : `${system} (has no data)`,
               value: system,
               disabled: false,
             });
           } else {
+            // If system does not have data, add to disabled list:
             optionsDisabled.push({
               label: `${system} (has no data)`,
               value: system,
               disabled: true,
             });
           }
+          // Options with enabled systems first, then disabled systems:
           options = optionsEnabled.concat(optionsDisabled);
         }
         this.setState({ options: options });
@@ -54,6 +61,11 @@ export class ModelSpecifications extends React.Component {
   }
 
   onSelect = (selected) => {
+    /*
+    Handle selection of systems based on maximum number of selected systems
+    allowed. If selections exceed the maximum number, the user is shown a
+    toast alert preventing the breached selection.
+  */
     const maxSelect = this.maxSelect;
     if (selected.length > maxSelect) {
       alert(`You can only select ${maxSelect} system.`);
@@ -64,21 +76,33 @@ export class ModelSpecifications extends React.Component {
   };
 
   onSelectedInput = (selectedInputs) => {
+    /*
+    If inputs are given from child component SignalSpecifications, set
+    selected inputs and send the inputs to the Startpage parent component.
+  */
     this.setState({ selectedInputs: selectedInputs });
     this.props.sendInputsUpdate(selectedInputs);
   };
   onSelectedOutput = (selectedOutputs) => {
+    /*
+    If ouputs are given from child component SignalSpecifications, set
+    selected inputs and send the inputs to the Startpage parent component.
+  */
     this.setState({ selectedOutputs: selectedOutputs });
     this.props.sendOutputsUpdate(selectedOutputs);
   };
 
   onContinue = () => {
-    const modelParameters = {
+    /*
+    If continue button is pressed (after all selections are made), send
+    model parameters to the Startpage parent component.
+  */
+    const modelSelections = {
       selectedSystem: this.state.selected,
       selectedInputs: this.state.selectedInputs,
       selectedOutputs: this.state.selectedOutputs,
     };
-    this.props.sendModelParameters(modelParameters);
+    this.props.sendModelSelections(modelSelections);
   };
 
   render() {
@@ -123,7 +147,7 @@ export class ModelSpecifications extends React.Component {
         </div>
         <div className="io-selector-container">
           {reachedSystemMax ? (
-            <ShapeSpecifications
+            <SignalSpecifications
               system={selected}
               type="input"
               maxSelect={inputSignals}
@@ -132,7 +156,7 @@ export class ModelSpecifications extends React.Component {
             />
           ) : null}
           {reachedSystemMax ? (
-            <ShapeSpecifications
+            <SignalSpecifications
               system={selected}
               type="output"
               maxSelect={outputSignals}
@@ -161,13 +185,19 @@ export class ModelSpecifications extends React.Component {
   }
 }
 
-// Model specification class for input and output signals selection
 export default ModelSpecifications;
 
-class ShapeSpecifications extends React.Component {
+// Specification class for input and output signals selection
+class SignalSpecifications extends React.Component {
+  /*
+    The component functions identically for both input and output selection.
+    Choice of providing input or output is done through the type property,
+    which will make the component behave as intended for the chosen type.
+  */
   constructor(props) {
     super(props);
     if (props.useSampleFiles) {
+      // Set selected to sample inputs if sample files are used:
       if (props.type === "input") {
         this.state = {
           options: [],
@@ -187,6 +217,7 @@ class ShapeSpecifications extends React.Component {
           ],
         };
       }
+      // Set selected to sample outputs if sample files are used:
       if (props.type === "output") {
         this.state = {
           options: [],
@@ -202,16 +233,18 @@ class ShapeSpecifications extends React.Component {
 
     this.SIGNAL_MAX = 20; // set to prevent exceeding server capabilities
   }
-
+  // If component is succesfully mounted
   componentDidMount() {
+    // Get signals from database through API call based on selected system:
     fetch(`signals/${this.props.system}`).then((response) =>
       response.json().then((data) => {
         const options = [];
-        for (let system of data.signals) {
-          if (system !== "id" && system !== "time") {
+        for (let sig of data.signals) {
+          if (sig !== "id" && sig !== "time") {
+            // Add options if column is not id or time:
             options.push({
-              label: system,
-              value: system,
+              label: sig,
+              value: sig,
             });
           }
         }
@@ -219,6 +252,7 @@ class ShapeSpecifications extends React.Component {
           options: options,
         });
         if (this.props.useSampleFiles) {
+          // If use sample files, send selection update to Startpage parent:
           this.props.sendUpdate(this.state.selected);
         }
       })
@@ -226,9 +260,15 @@ class ShapeSpecifications extends React.Component {
   }
 
   onSelect = (selected) => {
+    /*
+    On selecting new input/output signals, the function verifies that number
+    of selection does not exceed maximum selection provided by the .h5 model
+    file or MAX_SIGNAL variable. If selections exceed the set requirements,
+    the user is shown a toast alert preventing the breached selection.
+  */
     const maxSelect = this.props.maxSelect;
     const type = this.props.type;
-    const signalMax = this.SIGNAL_MAX;
+    const signalMax = Math.max(this.SIGNAL_MAX, maxSelect);
     if (this.props.useSampleFiles) {
       alert(`The ${type} signals area already set for the sample model.`);
     } else {
