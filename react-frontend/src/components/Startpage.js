@@ -1,11 +1,24 @@
 import React from "react";
 import "../styles/main.scss";
+
+import About from "./About";
 import ChartDashboard from "./ChartDashboard";
 import Header from "./Header";
 import ModelSpecifications from "./ModelSpecifications";
 import Upload from "./Upload";
 
 export class Startpage extends React.Component {
+  /*
+    The startpage component handles all of the interactions between different
+    components, and makes sure that the correct components are displayed based
+    on user specifications. There are three main display options supported by
+    the startpage:
+      - Selection page: intended for uploading model and scaler, and providing
+        specifications related to inputs and outputs used by the model.
+      - Chart dashboard: visualization of real-time values and anomaly
+        detection based on the provided model file and scaler.
+      - About page: short summary of the purpose of the web application.
+  */
   constructor(props) {
     super(props);
     this.state = {
@@ -13,7 +26,7 @@ export class Startpage extends React.Component {
       selectedInputs: [],
       selectedOutputs: [],
       useSampleFiles: false,
-      settingsComplete: false,
+      settingsComplete: false, // determines display
       modelFilename: null,
       scalerFilename: null,
       modelProperties: {
@@ -21,9 +34,10 @@ export class Startpage extends React.Component {
         output: null,
         timesteps: null,
       },
+      about: false, // determines display
     };
-    this.showSelectionParameters = false;
 
+    // Bind functions used to receive data from child components:
     this.onModelComplete = this.onModelComplete.bind(this);
     this.onFileUploaded = this.onFileUploaded.bind(this);
     this.onInputsUpdate = this.onInputsUpdate.bind(this);
@@ -31,16 +45,23 @@ export class Startpage extends React.Component {
     this.onSystemUpdate = this.onSystemUpdate.bind(this);
   }
 
-  onModelComplete = (modelParameters) => {
+  onModelComplete = (modelSelections) => {
+    /*
+    Executes when model parameters are received from the ModelSpecifications
+    child component.
+    */
     this.setState({
-      selectedSystem: modelParameters["selectedSystem"],
-      selectedInputs: modelParameters["selectedInputs"],
-      selectedOutputs: modelParameters["selectedOutputs"],
+      selectedSystem: modelSelections["selectedSystem"],
+      selectedInputs: modelSelections["selectedInputs"],
+      selectedOutputs: modelSelections["selectedOutputs"],
       settingsComplete: true,
     });
   };
 
   onFileUploaded = (filename, id) => {
+    /*
+    Executes when a file has been succesfully uploaded.
+    */
     if (id === "keras-model") {
       this.setState({ modelFilename: filename });
     }
@@ -50,10 +71,18 @@ export class Startpage extends React.Component {
   };
 
   onModelProperties = (modelProps) => {
+    /*
+    Executes when model properties have been constructed in in the Upload
+    child component.
+    */
     this.setState({ modelProperties: modelProps });
   };
 
   setSampleBool = () => {
+    /*
+    Executes when the user clicks to use sample files. the function only sets
+    new states if the useSampleFiles variable was previously false.
+    */
     if (!this.state.useSampleFiles) {
       this.setState({
         useSampleFiles: true,
@@ -63,13 +92,11 @@ export class Startpage extends React.Component {
     }
   };
 
-  checkFileUploads = () => {
-    if (!!this.state.modelFilename && !!this.state.scalerFilename) {
-      return true;
-    }
-  };
-
   resetUploadStates = (id) => {
+    /*
+    If new upload is instantiated in the Upload child component, reset states
+    affected in the Startpage parent.
+    */
     if (id === "keras-model") {
       this.setState({
         selectedSystem: [],
@@ -97,33 +124,56 @@ export class Startpage extends React.Component {
   };
 
   onSystemUpdate = (selectedSystem) => {
+    /*
+    Executes if a new system is selected.
+    */
     this.setState({ selectedSystem: selectedSystem });
   };
 
   onInputsUpdate = (selectedInputs) => {
+    /*
+    Executes if new inputs are selected.
+    */
     this.setState({ selectedInputs: selectedInputs });
   };
 
   onOutputsUpdate = (selectedOutputs) => {
+    /*
+    Executes if new outputs are selected.
+    */
     this.setState({ selectedOutputs: selectedOutputs });
   };
 
+  onAboutClick = () => {
+    /*
+    Executes on about click.
+    */
+    this.setState({ about: !this.state.about });
+  };
+
   render() {
-    const showSelectionParameters = this.checkFileUploads();
     const settingsComplete = this.state.settingsComplete;
     const useSampleFiles = this.state.useSampleFiles;
     const modelProperties = this.state.modelProperties;
-    // const selectedSystem = this.state.selectedSystem[0];
-    // const selectedInputs = this.state.selectedInputs;
-    // const selectedOutputs = this.state.selectedOutputs;
-    // const modelFilename = this.state.modelFilename;
-    // const modelTimesteps = this.state.modelProperties.timesteps;
-    // const scalerFilename = this.state.scalerFilename;
+    const selectedSystem = this.state.selectedSystem[0];
+    const selectedInputs = this.state.selectedInputs;
+    const selectedOutputs = this.state.selectedOutputs;
+    const modelFilename = this.state.modelFilename;
+    const modelTimesteps = this.state.modelProperties.timesteps;
+    const scalerFilename = this.state.scalerFilename;
+    const about = this.state.about;
+    const showSelectionParameters = !!modelFilename && !!scalerFilename;
     return (
       <div className="startpage">
-        <Header />
-
-        {settingsComplete ? ( // change ot !settingsComplete to bring back selections
+        <div className="about-button-container">
+          <button id="about-btn" onClick={this.onAboutClick}>
+            {!about ? "About" : "Back"}
+          </button>
+        </div>
+        <Header dashboard={settingsComplete} about={about} />
+        {about ? (
+          <About />
+        ) : !settingsComplete ? (
           [
             <div>
               <div id="upload-content">
@@ -164,23 +214,13 @@ export class Startpage extends React.Component {
                   </a>
                 </p>
               </div>
-              {/* <div className="question-container">
-                            <div className="tooltip-container">
-                                <span className="tooltiptext">
-                                    Keras models are saved in .h5-format, and contain necessary weights and biases to predict new values. It is important
-                                    that the model is applied to the same parameters that was used during training. The predicted outcome will correspond
-                                    with chosen output columns when training the model.
-                                </span>
-                            </div>
-                                <a className="question-tooltip">?</a>
-                        </div> */}
               <div className="model-selectors-container">
                 {showSelectionParameters ? (
                   <ModelSpecifications
                     inputSignals={modelProperties.inp}
                     outputSignals={modelProperties.out}
-                    sendModelParameters={(modelParameters) =>
-                      this.onModelComplete(modelParameters)
+                    sendModelSelections={(modelSelections) =>
+                      this.onModelComplete(modelSelections)
                     }
                     sendSystemUpdate={(selectedSystem) =>
                       this.onSystemUpdate(selectedSystem)
@@ -199,33 +239,13 @@ export class Startpage extends React.Component {
           ]
         ) : (
           <ChartDashboard
-            system="Nogva Engines"
-            inputs={[
-              "me1_backupbatt",
-              "me1_boostpress",
-              "me1_enginespeed",
-              "me1_exhausttemp1",
-              "me1_exhausttemp2",
-              "me1_fuelrate",
-              "me1_hours",
-              "me1_lopress",
-              "me1_luboiltemp",
-              "me1_power",
-              "me1_startbatt",
-              "me1_coolanttemp",
-            ]}
-            outputs={["me1_exhausttemp1", "me1_exhausttemp2"]}
-            sampleFiles={true}
-            modelFilename="sample_model.h5"
-            modelTimesteps={30}
-            scalerFilename="sample_scaler.pckl"
-            // system={selectedSystem}
-            // inputs={selectedInputs}
-            // outputs={selectedOutputs}
-            // sampleFiles={useSampleFiles}
-            // modelFilename={modelFilename}
-            // modelTimesteps={modelTimesteps}
-            // scalerFilename={scalerFilename}
+            system={selectedSystem}
+            inputs={selectedInputs}
+            outputs={selectedOutputs}
+            sampleFiles={useSampleFiles}
+            modelFilename={modelFilename}
+            modelTimesteps={modelTimesteps}
+            scalerFilename={scalerFilename}
           />
         )}
       </div>
