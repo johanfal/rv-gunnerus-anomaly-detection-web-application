@@ -1,3 +1,9 @@
+/*
+This component was largely developed by Hatem Hassan (2019), and the source
+repository can be found on GitHub at:
+https://github.com/iammowgoud/Peak-Detection-Visualization/blob/master/src/d3-helpers/d3-ts-chart.js
+*/
+
 import * as d3 from "d3";
 
 const SERIES_TYPES = ["LINE", "AREA"];
@@ -68,7 +74,10 @@ export class ChartVisuals {
       .append("g")
       .attr("width", this.outerWidth - this.margin.left - this.margin.right)
       .attr("height", this.outerHeight - this.margin.top - this.margin.bottom)
-      .attr("transform", `translate(${this.margin.left} , ${this.margin.top})`)
+      .attr(
+        "transform",
+        `translate(${this.margin.left} , ${this.margin.top})`
+      )
       .classed(this.classList.group || null, true);
 
     // X Axis init
@@ -233,11 +242,12 @@ export class ChartVisuals {
       );
   }
 
-  /**
-   * This function adapts axes and lines to width/height inherited from parent container element
-   * So basically if `responsiveHeight` & `responsiveWidth` are true, it fills the parent container
-   */
   adjustDimensions() {
+    /*
+  This function adapts axes and lines to width/height inherited from parent
+  container element. If responsiveHeight and responsiveWidth are true, the
+  parent container is filled.
+  */
     if (this.responsiveHeight) {
       this.outerHeight = this.elRef.offsetHeight;
       this.svg
@@ -267,7 +277,10 @@ export class ChartVisuals {
         .transition()
         .duration(TRANSITION_DURATION)
         .ease(d3.easeLinear)
-        .attr("width", this.outerWidth - this.margin.left - this.margin.right);
+        .attr(
+          "width",
+          this.outerWidth - this.margin.left - this.margin.right
+        );
       this.xScale.range([
         0,
         this.outerWidth - this.margin.left - this.margin.right,
