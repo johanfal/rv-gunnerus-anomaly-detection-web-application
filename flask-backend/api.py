@@ -11,7 +11,7 @@ import numpy as np
 from flask import Flask, redirect, render_template, request, url_for
 from flask_socketio import SocketIO, emit, send
 from sqlalchemy import create_engine, inspect
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import load_only, session
 
 # Instantiate Flask application
 app = Flask(__name__)
@@ -38,11 +38,15 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initiate database engine:
-engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+engine = create_engine(
+    app.config['SQLALCHEMY_DATABASE_URI'],
+    pool_size=40,
+    max_overflow=80)
 
 # Initialize PostgreSQL Heroku database with SQL Alchemy:
 db = SQLAlchemy(app)
 db.init_app(app)
+
 # Initialize Flask-SocketIO:
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins='*')
@@ -92,7 +96,7 @@ def get_signals(system_table):
     name of the selected system from the database."""
     # Properties of current system table, used to retrieve table columns:
     table_props = inspect(engine).get_columns(system_table)
-    signals = []
+    signals = []  # placeholder for signals
 
     # Name of each column of the selected system:
     for col in table_props:
@@ -115,10 +119,10 @@ def stop_thread():
     reload, a new thread will be initiated with new properties."""
     global engine, thread, thread_stop_event
     if thread.is_alive():
-        thread_stop_event = Event() # define stop event
-        thread_stop_event.set() # set stop event
-        del thread # delete thread to prevent double-initiation
-        thread = Thread() # create new thread object
+        thread_stop_event = Event()  # define stop event
+        thread_stop_event.set()  # set stop event
+        del thread  # delete thread to prevent double-initiation
+        thread = Thread()  # create new thread object
         print(f'Upon page reload, the thread has been discontinued.')
         return {'thread_stopped': True}
     engine.dispose()
@@ -203,8 +207,9 @@ def save_uploaded_scaler(use_sample):
             scaler_propertis = False
     return {'fileprops': scaler_propertis}
 
+
 @app.route('/create_thread/<system>/<input_cols>/<output_cols>',
-            methods=['GET', 'POST'])
+           methods=['GET', 'POST'])
 def initiate_thread(system, input_cols, output_cols):
     global thread, thread_stop_event
     # convert strings from client to lists with comma-delimiter:
@@ -277,19 +282,18 @@ class ValueThread(Thread):
         timesteps = self.timesteps
         input_cols = self.input_cols
         system = self.system
-        global table_classes  # Delete (only when startpage is disabled)
-        table_classes = get_table_classes()  # Delete (same as above)
         with app.app_context():  # enable database access through SQLAlchemy
             X_pred = []  # Placeholder for each timestep of signal values
             for i in range(1, timesteps):
                 ordered_values = []
-                values = table_classes[system].query.options(
+                values = db.session.query(table_classes[system]).options(
                     load_only(*input_cols)).get(i).get_dict()
                 for col in input_cols:
                     ordered_values.append(values[col])
                 # append current timestep values
                 X_pred.append(ordered_values)
         # Return transformed values with shape (timesteps, features):
+        db.session.close()
         return scaler.transform(X_pred)
 
     def get_output_indices(self):
@@ -316,10 +320,10 @@ class ValueThread(Thread):
 
                 # Query values as dictionary containing input_cols and time:
                 try:
-                    values = table_classes[self.system].query.options(
-                        load_only(
-                            *self.fetch_columns
-                        )).get(self.index).get_dict()
+                    values = db.session.query(
+                        table_classes[self.system]).options(
+                        load_only(*self.fetch_columns)).get(
+                        self.index).get_dict()
                     values['time'] = str(values['time'])
                     ordered_values = []
                     # Order values correctly according to model, and exclude
@@ -365,8 +369,10 @@ class ValueThread(Thread):
                         sleep_time = self.delay - calculation_time
                     time.sleep(sleep_time)
                     self.index += 1
+
                 except BaseException:
                     thread_stop_event.set()
+        db.session.close()
         try:
             thread_stop_event.set()
         except BaseException:
