@@ -134,6 +134,8 @@ def save_uploaded_model(use_sample):
     """Receives uploaded Keras model file from frontend client. If use_sample
     is true, the sample model, uploaded locally, is used instead."""
     global keras_model, model_properties
+    try: del keras_model # delete model if already defined in global scope
+    except: pass
     if use_sample == 'true':  # load sample model
         sample_model_path = os.path.join(SAMPLES_DIR, 'sample_model.h5')
         keras_model = load_model(sample_model_path)
@@ -169,6 +171,8 @@ def save_uploaded_scaler(use_sample):
     use_sample is true, the sample scaler, uploaded locally, is used
     instead."""
     global scaler
+    try: del scaler # delete scaler if already defined in global scope
+    except: pass
     if use_sample == 'true':  # load sample scaler
         sample_scaler_path = os.path.join(
             SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
