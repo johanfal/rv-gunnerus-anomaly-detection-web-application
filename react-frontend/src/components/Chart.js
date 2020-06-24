@@ -1,49 +1,13 @@
 import React, { createRef } from "react";
-
 import D3TsChart from "./ChartVisuals";
 
-const MAX_POINTS_TO_STORE = 50;
-const DEFAULT_X_TICKS = 30;
-// const SOCKETIO_ERRORS = ['reconnect_error', 'connect_error', 'connect_timeout', 'connect_failed', 'error'];
+const MAX_POINTS_TO_STORE = 50; // Stored in client memory
+const DEFAULT_X_TICKS = 30; // Granularity along x-axis
 
-/**
- *  Component cycle:
- * 1. `componentDidMount()`
- *     => Initialize a `D3TsChart()` with nod data
- * 2. `socket.connect()` pings WebSocket then on each `on('reading')` event:
- *     => `storeReading()` in component `state`
- *     => `updateChart()` seperates original data from peak detection series
- *         then calls `D3TsChart.setSeriesData()`
- *
- * 3. `componentWillUnmount()` disconects from socket.
- */
 export class Chart extends React.Component {
   constructor(props) {
     super(props);
-    var threshold = 0;
-    var ofx = 0;
-    if (this.props.samples) {
-      if (this.props.sensorId === "me1_exhausttemp1") {
-        ofx = 1.5;
-        threshold = 5;
-      }
-      if (this.props.sensorId === "me1_exhausttemp2") {
-        ofx = 10;
-        threshold = 5;
-      }
-    }
-    this.state = {
-      data: [],
-      lastTimeStr: null,
-      lastDateStr: "",
-      connected: false,
-      error: "",
-      status: null,
-      threshold: threshold,
-      ofx: ofx,
-      predToggled: true,
-      anomToggled: true,
-    };
+    // Series for sensor data, prediction and anomalies:
     this.seriesList = [
       {
         name: "sensor-data",
@@ -55,6 +19,7 @@ export class Chart extends React.Component {
       },
     ];
     if (this.props.pred) {
+      // if current signal has prediction properties
       this.seriesList.push(
         {
           name: "prediction",
@@ -75,25 +40,43 @@ export class Chart extends React.Component {
         }
       );
     }
-
+    // Set threshold values for samples (predetermined based on experience):
+    var threshold = 0;
+    var ofx = 0;
+    if (this.props.samples) {
+      if (this.props.sensorId === "me1_exhausttemp1") {
+        ofx = 1.5;
+        threshold = 5;
+      }
+      if (this.props.sensorId === "me1_exhausttemp2") {
+        ofx = 10;
+        threshold = 5;
+      }
+    }
+    // Instantiate a new D3TsChart:
     this.tsChart = new D3TsChart();
-    this.wrapper = createRef();
+    this.wrapper = createRef(); // handle references to component node
     this.updateThreshold = this.updateThreshold.bind(this);
+
+    this.state = {
+      data: [], // storing values from the last MAX_POINTS_TO_STORE timesteps
+      lastDatetime: null, // last registered datetime
+      lastTimeStr: "", // last registered time
+      lastDateStr: "", // last registered date
+      connected: false, // status of signal
+      error: "", // error message
+      threshold: threshold, // threshold value as defined above
+      ofx: ofx, // offset x-value as defined above
+      predToggled: true, // boolean toggle status for prediction values
+      anomToggled: true, // boolean toggle status for registered anomalies
+    };
   }
 
-  socket;
-
+  // If component is succesfully mounted
   componentDidMount() {
-    // At this point, this.props includes the input from the called component in "App.js"
-    if (this.props["sensorId"] === undefined)
-      throw new Error("You have to pass 'sensorId' prop to Chart component");
-    if (this.props["x-ticks"] > MAX_POINTS_TO_STORE)
-      throw new Error(
-        `You cannot display more than ${MAX_POINTS_TO_STORE} 'x-ticks'. `
-      );
-
     const node = this.wrapper.current; // used for node ref
 
+    // Initialize chart preliminaries:
     this.tsChart.init({
       elRef: node.getElementsByClassName("chart-container")[0],
       classList: {
@@ -101,69 +84,86 @@ export class Chart extends React.Component {
       },
     });
 
+    // Add series from seriesList:
     this.tsChart.addSeries(this.seriesList[0]); // readings
     if (this.props.pred) {
       this.tsChart.addSeries(this.seriesList[1]); // anomaly
       this.tsChart.addSeries(this.seriesList[2]); // prediction
     }
 
-    this.attachFocusWatcher();
+    this.attachFocusWatcher(); // call handler for window focus
   }
 
+  // On change in props, affecting state over time:
   static getDerivedStateFromProps(nextProps, prevState) {
+    // If next registered time is null (no valid reading provided):
     if (nextProps.values.time === null) {
-      return { lastTimeStr: null, lastDateStr: "", connected: false };
+      console.log("yes");
+      return { lastTimeStr: "", lastDateStr: "", connected: false };
     }
+    let connected;
+    let error;
+    let datetime;
+    nextProps.connected ? (connected = true) : (connected = false);
+    connected ? (error = "") : (error = "Error: No new values found");
     const values = nextProps.values;
+    connected
+      ? (datetime = new Date(values.time))
+      : (datetime = prevState.lastDatetime);
     const threshold = prevState.threshold;
-    const datetime = new Date(values.time);
     const timestamp = Date.parse(datetime);
     const dateStr = datetime.toLocaleDateString("en-GB");
     const timeStr = datetime.toLocaleTimeString("en-GB");
     const data = prevState.data;
+    // Calculate storage slicer:
     const pointsToStore = Math.max(data.length - MAX_POINTS_TO_STORE, 0);
     var lastTimestamp = "";
+
+    // Get last valid timestamp:
     if (prevState.data.length > 0) {
       lastTimestamp = prevState.data[prevState.data.length - 1].timestamp;
     }
 
+    // Verify that the current timestamp differs from the last timestamp
+    // to prevent excessive rerendering and faults in the chart:
     if (timestamp !== lastTimestamp) {
+      // Initial definition of newValues:
       const newValues = {
         timestamp: timestamp,
         value: values.signal,
       };
       if (nextProps.pred) {
+        // Adjust newValues if the current chart has a prediction state:
         newValues["pred"] = values.pred + prevState.ofx;
-        newValues["deviation"] = Math.abs(values.signal - newValues.pred);
+        newValues["deviation"] = Math.abs(newValues.value - newValues.pred);
         newValues["anomaly"] =
           threshold === 0 ? 0 : newValues["deviation"] > threshold ? 1 : 0;
       }
 
-      data.push(newValues);
+      data.push(newValues); // add newValues to existing data storage
       return {
-        data: data.slice(pointsToStore),
-        connected: true,
-        error: false,
+        data: data.slice(pointsToStore), // slice data storage
+        connected: connected,
+        error: error,
+        lastDatetime: datetime,
         lastDateStr: dateStr,
         lastTimeStr: timeStr,
       };
     } else {
       return {
         data: data.slice(pointsToStore),
-        connected: true,
-        error: false,
+        connected: connected,
+        error: error,
+        lastDatetime: datetime,
         lastDateStr: dateStr,
         lastTimeStr: timeStr,
       };
     }
   }
 
-  shouldComponentUpdate(_nextProps, _nextState) {
-    return true;
-  }
-
+  // On component update:
   componentDidUpdate(_prev_props, _prevState) {
-    this.updateChart();
+    this.updateChart(); // call chart update function
   }
 
   // Handle window focus
@@ -178,16 +178,28 @@ export class Chart extends React.Component {
   }
 
   updateChart() {
+    /*
+    Update necessary parts of the chart, including axes, y-axis value domain,
+    and applying data from the latest timestep.
+  */
+    // Calculate number of values registered along x-axis (if more than
+    // DEFAULT_X_TICKS values have been registered, the number of ticks maxes
+    // out at DEFAULT_X_TICKS):
     const xTicks = Math.max(
       this.state.data.length - (this.props["x-ticks"] || DEFAULT_X_TICKS),
       0
     );
-    const data = this.state.data.slice(xTicks);
+    const data = this.state.data.slice(xTicks); // get relevant values
+    // Calculate highest value currently seen:
     var highestValueInView = Math.max(...data.map((p) => p.value));
     if (this.props.pred) {
+      // If prediction values are included, calculate highest pred value:
       let highestPredInView = Math.max(...data.map((p) => p.pred));
       highestValueInView = Math.max(highestValueInView, highestPredInView);
     }
+
+    // Apply anomaly line based on the currently registered maximum in-view
+    // value (makes the anomalies take up the entirety of the y-domain):
     const anomalyLine = data.map((p) => ({
       timestamp: p.timestamp,
       value: p.anomaly ? highestValueInView : 0,
@@ -202,6 +214,9 @@ export class Chart extends React.Component {
   }
 
   toggleSeries = ({ target }) => {
+    /*
+    On click, toggle series based on target id.
+  */
     if (target.id === "anomaly") {
       this.setState({ anomToggled: !this.state.anomToggled });
     } else if (target.id === "prediction") {
@@ -212,9 +227,13 @@ export class Chart extends React.Component {
   };
 
   updateThreshold = (event) => {
+    /*
+    On click, update threshold value.
+  */
     event.preventDefault();
     const thresholdValue = this.thresholdField.value;
     if (thresholdValue !== "") {
+      // prevent empty, non-numeric values
       this.setState({ threshold: thresholdValue });
     }
   };
@@ -224,7 +243,9 @@ export class Chart extends React.Component {
     <div className="card" ref={this.wrapper}>
       <h2>
         {!this.state.lastTimeStr
-          ? "Connecting..."
+          ? `${this.props.sensorId.toUpperCase()} connecting...`
+          : !this.state.connected
+          ? `${this.props.sensorId.toUpperCase()}`
           : `${this.props.sensorId.toUpperCase()}: ${
               this.props.values.signal
             }`}
@@ -252,9 +273,13 @@ export class Chart extends React.Component {
               onClick={this.toggleSeries}
             >
               <i className="box"></i>
-              {series.label === "Anomaly" && this.state.anomToggled
+              {series.label === "Anomaly" &&
+              this.state.anomToggled &&
+              this.state.connected
                 ? `${series.label} (T: ${this.state.threshold})`
-                : series.label === "Prediction" && this.state.predToggled
+                : series.label === "Prediction" &&
+                  this.state.predToggled &&
+                  this.state.connected
                 ? `${series.label} (dev: ${
                     this.state.data.length > 0
                       ? this.state.data[this.state.data.length - 1][
@@ -285,6 +310,8 @@ export class Chart extends React.Component {
               <hr
                 style={{
                   border: "1px solid rgb(230,230,230)",
+                  color: "rgb(230,230,230)",
+                  backgroundColor: "rgb(230,230,230)",
                   marginBottom: "0px",
                 }}
               />
