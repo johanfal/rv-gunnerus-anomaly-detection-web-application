@@ -288,8 +288,9 @@ export class ChartDashboard extends React.Component {
     /*
       Handle component termination
     */
-    this.socket.disconnect();
-    fetch("stop_thread");
+    if (this.state.connected) {
+      this.socket.disconnect();
+    }
   }
 
   // Render component:
