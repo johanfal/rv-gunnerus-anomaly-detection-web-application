@@ -31,7 +31,7 @@ export class ChartDashboard extends React.Component {
     const strInputs = this.inputs.join(",");
     const strOutputs = this.outputs.join(",");
     this.onReload(); // handle window reload
-    this.connect();
+    this.connect(); // connect socket IO
 
     // Start threading object in API, and generate the first input values to
     // the prediction model:
