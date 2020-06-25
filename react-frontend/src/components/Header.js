@@ -15,7 +15,7 @@ export const Header = (props) => {
         {props.about
           ? "ABOUT"
           : `ANOMALY DETECTION ${
-              props.dashboard ? "DASHBOARD" : "STARTPAGE"
+              props.dashboard ? "DASHBOARD" : "START PAGE"
             }`}
       </h1>
       {props.about
