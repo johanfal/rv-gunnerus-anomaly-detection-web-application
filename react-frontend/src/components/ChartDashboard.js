@@ -31,7 +31,6 @@ export class ChartDashboard extends React.Component {
     const strInputs = this.inputs.join(",");
     const strOutputs = this.outputs.join(",");
     this.onReload(); // handle window reload
-    this.connect(); // connect socket IO
 
     // Start threading object in API, and generate the first input values to
     // the prediction model:
@@ -271,6 +270,7 @@ export class ChartDashboard extends React.Component {
       function.
     */
     if (updateConnectionStatus) {
+      this.connect(); // connect socket IO
       this.setState({
         chartItems: selectedItems,
         connected: true,
