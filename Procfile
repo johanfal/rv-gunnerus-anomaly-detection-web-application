@@ -1,1 +1,1 @@
-web: gunicorn --no-sendfile --chdir flask-backend api:app
+web: gunicorn --preload --no-sendfile --chdir flask-backend api:app
