@@ -1,1 +1,1 @@
-web: gunicorn --preload --no-sendfile --chdir flask-backend api:app
+web: gunicorn --preload --no-sendfile --worker-class eventlet -w 1 --chdir flask-backend api:app
