@@ -98,7 +98,6 @@ export class Chart extends React.Component {
   static getDerivedStateFromProps(nextProps, prevState) {
     // If next registered time is null (no valid reading provided):
     if (nextProps.values.time === null) {
-      console.log("yes");
       return { lastTimeStr: "", lastDateStr: "", connected: false };
     }
     let connected;
