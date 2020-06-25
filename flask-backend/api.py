@@ -22,11 +22,16 @@ app = Flask(
 
 eventlet.monkey_patch()  # ensure appropriate threading behavior
 
-# Add secret key
-app.secret_key = os.environ.get('SECRET')
-
-# Configure PostgreSQL Heroku database with the database URL
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+in_production = os.environ.get('IN_PRODUCTION', None)
+if in_production:
+    # Add secret key
+    app.secret_key = os.environ.get('SECRET')
+    # Configure PostgreSQL Heroku database with the database URL
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+else:
+    # Add Heroku configuration variables here:
+    app.secret_key = "ADD VALID SECRET KEY HERE"
+    app.config['SQLALCHEMY_DATABASE_URI'] = "ADD DATABASE URL HERE"
 
 # Directories for uploaded files and sample files:
 UPLOADS_DIR = os.path.join(app.instance_path, 'uploads')
