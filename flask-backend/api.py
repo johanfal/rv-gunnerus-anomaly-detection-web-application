@@ -9,6 +9,7 @@ from threading import Event, Thread
 import eventlet
 import numpy as np
 from flask import Flask, redirect, render_template, request, url_for
+from flask import session as storage
 from flask_socketio import SocketIO, emit, send
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import load_only, session
@@ -22,15 +23,10 @@ app = Flask(
 eventlet.monkey_patch()  # ensure appropriate threading behavior
 
 # Add secret key
-app.secret_key = "b'\xb14AG\xab\xd8\x14\xb6^h\x05\xba@\xce 6'"
-# app.secret_key = os.environ.get('SECRET')
+app.secret_key = os.environ.get('SECRET')
 
 # Configure PostgreSQL Heroku database with the database URL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://dzetpohgmhykyo:224b34d1' \
-                                        '3893d313b360dd10966bbfdb905ab323ef' \
-                                        '15c7fa9cc3d712a9a909c7@ec2-34-225-' \
-                                        '162-157.compute-1.amazonaws.com:54' \
-                                        '32/d8s9d5jbimqmeo'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get['DATABASE_URL']
 
 # Directories for uploaded files and sample files:
 UPLOADS_DIR = os.path.join(app.instance_path, 'uploads')
@@ -58,19 +54,9 @@ INTERVAL = 1  # fetch interval from database in seconds (data frequency)
 
 
 # Instantiating variables for global scope:
-[
-    keras_model,
-    model_properties,
-    n_input_columns,
-    scaler,
-    timesteps,
-    X_pred,
-    X_tran,
-] = [None] * 7
-
 thread = Thread()  # define thread object
 thread_stop_event = Event()  # define threading-event (used for termination)
-table_classes = get_table_classes() # define table of models from models.py
+
 
 @app.route('/')
 def index():
@@ -81,9 +67,8 @@ def index():
 def get_systems():
     """Return a list of systems based on the entry tables in the PostgreSQL
     database, which are instantiated through SQL Alchemy in 'models.py'."""
-    global table_classes
     # Dict of all model classes from models.py with table names as key:
-    table_classes = get_table_classes() # from models.py
+    table_classes = get_table_classes()  # from models.py
     systems = {}
     tables = engine.table_names()
     for table in tables:
@@ -140,38 +125,37 @@ def stop_thread():
 def save_uploaded_model(use_sample):
     """Receives uploaded Keras model file from frontend client. If use_sample
     is true, the sample model, uploaded locally, is used instead."""
-    global keras_model, model_properties
-    try:
-        del keras_model  # delete model if already defined in global scope
-    except BaseException:
-        pass
+    # Delete model path if already defined in flask storage session:
+    storage.pop('keras_model_path', None)
     if use_sample == 'true':  # load sample model
-        sample_model_path = os.path.join(SAMPLES_DIR, 'sample_model.h5')
-        keras_model = load_model(sample_model_path)
+        storage['keras_model_path'] = os.path.join(
+            SAMPLES_DIR, 'sample_model.h5')
+        keras_model = load_model(storage['keras_model_path'])
     else:  # load uploaded model based on filename request from client
         file = request.files['file']  # request from client
-        model_path = os.path.join(
+        storage['keras_model_path'] = os.path.join(
             UPLOADS_DIR, secure_filename(
                 file.filename))
-        file.save(model_path)  # save to UPLOADS_DIR with provided filename
-        print(f"succesfully saved model to '{model_path}'")
+        # save to UPLOADS_DIR with provided filename
+        file.save(storage['keras_model_path'])
+        print(f"succesfully saved model to '{storage['keras_model_path']}'")
         try:
             # Attempt to load Keras model with native Keras function:
-            keras_model = load_model(model_path)
+            keras_model = load_model(storage['keras_model_path'])
         except BaseException:
             # Something went wrong during Keras model loading:
-            model_properties = False
+            storage['model_properties'] = False
     try:
         # Attempt to set properties through native Keras attributes:
-        model_properties = {
+        storage['model_properties'] = {
             'inp': keras_model.input_shape[2],
             'out': keras_model.output_shape[1],
             'timesteps': keras_model.input_shape[1]
         }
     except BaseException:
         # Something went wrong when reading model properties:
-        model_properties = False
-    return {'fileprops': model_properties}
+        storage['model_properties'] = False
+    return {'fileprops': storage['model_properties']}
 
 
 @app.route('/scaler/<use_sample>', methods=['GET', 'POST'])
@@ -179,15 +163,12 @@ def save_uploaded_scaler(use_sample):
     """Receives uploaded sklearn scaler file from frontend client. If
     use_sample is true, the sample scaler, uploaded locally, is used
     instead."""
-    global scaler
-    try:
-        del scaler  # delete scaler if already defined in global scope
-    except BaseException:
-        pass
+    # Delete scaler path if already defined in flask storage session:
+    storage.pop('scaler_path', None)
     if use_sample == 'true':  # load sample scaler
-        sample_scaler_path = os.path.join(
+        storage['scaler_path'] = os.path.join(
             SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
-        with open(sample_scaler_path, 'rb') as f:
+        with open(storage['scaler_path'], 'rb') as f:
             scaler = pickle.load(f)[0]  # retrieve scaler from pickle object
             # Set scaler properties:
             scaler_propertis = {
@@ -197,13 +178,13 @@ def save_uploaded_scaler(use_sample):
             }
     else:  # load uploaded scaler based on filename requested from client
         file = request.files['file']  # request from client
-        uploaded_scaler_path = os.path.join(
+        storage['scaler_path'] = os.path.join(
             UPLOADS_DIR, secure_filename(file.filename))
         # Save to UPLOADS_DIR with provided filename
-        file.save(uploaded_scaler_path)
-        print(f"succesfully saved scaler to '{uploaded_scaler_path}'")
+        file.save(storage['scaler_path'])
+        print(f"succesfully saved scaler to '{storage['scaler_path']}'")
         try:
-            with open(uploaded_scaler_path, 'rb') as f:
+            with open(storage['scaler_path'], 'rb') as f:
                 try:  # Attempt to load scaler with native pickle function:
                     # Scaler part of modeling API exported file, containing
                     # [scaler, df_train, df_test]:
@@ -230,10 +211,13 @@ def initiate_thread(system, input_cols, output_cols):
     # convert strings from client to lists with comma-delimiter:
     input_cols = input_cols.split(',')
     output_cols = output_cols.split(',')
-
+    timesteps = storage['model_properties']['timesteps']
     if not thread.is_alive():
         print(f'Creating thread object..')
-        thread = ValueThread(system, input_cols, output_cols)
+        thread = ValueThread(system, input_cols, output_cols, timesteps)
+        thread.scaler = get_scaler(storage['scaler_path'])
+        thread.keras_model = get_model(storage['keras_model_path'])
+        thread.X_pred = thread.get_first_input_values()
     else:
         print(f'Attempting to connect while thread is active')
     return {'thread_created': True}
@@ -267,10 +251,13 @@ class ValueThread(Thread):
     the database and client, allowing for a realtime transmission of data
     through websockets."""
 
-    def __init__(self, system, input_cols, output_cols):
+    def __init__(self, system, input_cols, output_cols, timesteps):
         """Instantiate class object."""
         self.system = system
         self.input_cols = input_cols  # inputs used for prediction in model
+        # Get table model for current system (used for querying database):
+        table_classes = get_table_classes()
+        self.sys_table = table_classes[system]
         # Variable for columns that will be queried from database:
         self.fetch_columns = ['time']
         self.fetch_columns.extend(self.input_cols)
@@ -278,12 +265,11 @@ class ValueThread(Thread):
         self.output_indices = self.get_output_indices()
         self.delay = INTERVAL  # frequency of updates
         # model timesteps used
-        self.timesteps = model_properties['timesteps']
+        self.timesteps = timesteps
         # Set initial index (database follows a not-null approach, meaning the
         # first row index is 1):
         self.index = self.timesteps  # initial index
         # Get the input values for the first timestep-values:
-        self.X_pred = self.get_first_input_values()
         super(ValueThread, self).__init__()
 
     def get_first_input_values(self):
@@ -301,7 +287,7 @@ class ValueThread(Thread):
             X_pred = []  # Placeholder for each timestep of signal values
             for i in range(1, timesteps):
                 ordered_values = []
-                values = db.session.query(table_classes[system]).options(
+                values = db.session.query(self.sys_table).options(
                     load_only(*input_cols)).get(i).get_dict()
                 for col in input_cols:
                     ordered_values.append(values[col])
@@ -309,7 +295,7 @@ class ValueThread(Thread):
                 X_pred.append(ordered_values)
         # Return transformed values with shape (timesteps, features):
         db.session.close()
-        return scaler.transform(X_pred)
+        return self.scaler.transform(X_pred)
 
     def get_output_indices(self):
         """Returns a list with the position of each output column in the
@@ -335,8 +321,7 @@ class ValueThread(Thread):
 
                 # Query values as dictionary containing input_cols and time:
                 try:
-                    values = db.session.query(
-                        table_classes[self.system]).options(
+                    values = db.session.query(self.sys_table).options(
                         load_only(*self.fetch_columns)).get(
                         self.index).get_dict()
                     values['time'] = str(values['time'])
@@ -346,14 +331,14 @@ class ValueThread(Thread):
                     for col in self.input_cols:
                         ordered_values.append(values[col])
                     # Scale new values:
-                    scaled_values = scaler.transform([ordered_values])
+                    scaled_values = self.scaler.transform([ordered_values])
                     # Add new values to the end of X_pred:
                     self.X_pred = np.append(
                         self.X_pred, scaled_values, axis=0)
 
                     # Predict values at the next timestep (the input must be a
                     # numpy array with shape (1,timesteps, features)):
-                    pred_values = keras_model.predict(
+                    pred_values = self.keras_model.predict(
                         np.array([self.X_pred]))
                     pred_value_counter = 0
                     # Add values to placeholder list for predictions:
@@ -363,7 +348,8 @@ class ValueThread(Thread):
                         ]
                         pred_value_counter += 1
                     # Inverse transform predicted values:
-                    pred_vals_list = scaler.inverse_transform(pred_vals_list)
+                    pred_vals_list = self.scaler.inverse_transform(
+                        pred_vals_list)
                     # Add predicted values from placeholder list to values
                     # dict:
                     pred_value_counter = 0
@@ -398,6 +384,21 @@ class ValueThread(Thread):
 
     def run(self):
         self.get_data()
+
+
+def get_scaler(path):
+    """Loads the pickle-file containing data scaler specified by the
+    'scaler_path'."""
+    with open(path, 'rb') as f:
+        try:
+            return pickle.load(f)[0]
+        except BaseException:
+            return pickle.load(f)
+
+
+def get_model(path):
+    """Loads the Keras model-file specified by the 'keras_model_path'."""
+    return load_model(path)
 
 
 if __name__ == '__main__':
