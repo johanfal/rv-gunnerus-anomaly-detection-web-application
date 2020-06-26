@@ -24,7 +24,10 @@ export const Header = (props) => {
               <h4 className="repotitle">GITHUB REPOSITORIES</h4>
               <span>
                 <a
-                  href="https://www.google.com"
+                  href={
+                    "https://github.com/johanfal/rv-gunnerus" +
+                    "-anomaly-detection-web-application"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -33,7 +36,10 @@ export const Header = (props) => {
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <a
-                  href="https://www.google.com"
+                  href={
+                    "https://github.com/johanfal/rv-gunnerus" +
+                    "-anomaly-detection-modeling-api"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
