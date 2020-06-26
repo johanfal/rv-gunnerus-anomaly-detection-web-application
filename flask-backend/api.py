@@ -176,7 +176,7 @@ def save_uploaded_scaler(use_sample):
         with open(storage['scaler_path'], 'rb') as f:
             scaler = pickle.load(f)[0]  # retrieve scaler from pickle object
             # Set scaler properties:
-            scaler_propertis = {
+            scaler_properties = {
                 'type': str(scaler),
                 'features': scaler.n_features_in_,
                 'samples': scaler.n_samples_seen_
@@ -190,23 +190,24 @@ def save_uploaded_scaler(use_sample):
         print(f"succesfully saved scaler to '{storage['scaler_path']}'")
         try:
             with open(storage['scaler_path'], 'rb') as f:
-                try:  # Attempt to load scaler with native pickle function:
-                    # Scaler part of modeling API exported file, containing
-                    # [scaler, df_train, df_test]:
-                    scaler = pickle.load(f)[0]
-                except BaseException:
-                    # Scaler uploaded independently of modeling API:
-                    scaler = pickle.load(f)
+                # Attempt to load scaler with native pickle function:
+                scaler = pickle.load(f)
+            # Scaler part of modeling API exported file, containing
+            # [scaler, df_train, df_test]:
+            try:
+                scaler = scaler[0]
+            except BaseException:
+                pass  # scaler uploaded independently of modeling API:
             # Attempt to set properties through native Sklearn attributes:
-            scaler_propertis = {
+            scaler_properties = {
                 'type': str(scaler),
                 'features': scaler.n_features_in_,
                 'samples': scaler.n_samples_seen_
             }
         except BaseException:
             # Something went wrong when loading scaler or reading properties:
-            scaler_propertis = False
-    return {'fileprops': scaler_propertis}
+            scaler_properties = False
+    return {'fileprops': scaler_properties}
 
 
 @app.route('/create_thread/<system>/<input_cols>/<output_cols>',
@@ -395,10 +396,11 @@ def get_scaler(path):
     """Loads the pickle-file containing data scaler specified by the
     'scaler_path'."""
     with open(path, 'rb') as f:
-        try:
-            return pickle.load(f)[0]
-        except BaseException:
-            return pickle.load(f)
+        scaler = pickle.load(f)
+    try:
+        return scaler[0]
+    except BaseException:
+        return scaler
 
 
 def get_model(path):
