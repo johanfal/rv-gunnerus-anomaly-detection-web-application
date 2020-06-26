@@ -42,15 +42,12 @@ export class Chart extends React.Component {
     }
     // Set threshold values for samples (predetermined based on experience):
     var threshold = 0;
-    var ofx = 0;
     if (this.props.samples) {
       if (this.props.sensorId === "me1_exhausttemp1") {
-        ofx = 1.5;
-        threshold = 5;
+        threshold = 8;
       }
       if (this.props.sensorId === "me1_exhausttemp2") {
-        ofx = 10;
-        threshold = 5;
+        threshold = 15;
       }
     }
     // Instantiate a new D3TsChart:
@@ -66,7 +63,6 @@ export class Chart extends React.Component {
       connected: false, // status of signal
       error: "", // error message
       threshold: threshold, // threshold value as defined above
-      ofx: ofx, // offset x-value as defined above
       predToggled: true, // boolean toggle status for prediction values
       anomToggled: true, // boolean toggle status for registered anomalies
     };
@@ -133,12 +129,11 @@ export class Chart extends React.Component {
       };
       if (nextProps.pred) {
         // Adjust newValues if the current chart has a prediction state:
-        newValues["pred"] = values.pred + prevState.ofx;
+        newValues["pred"] = values.pred;
         newValues["deviation"] = Math.abs(newValues.value - newValues.pred);
         newValues["anomaly"] =
           threshold === 0 ? 0 : newValues["deviation"] > threshold ? 1 : 0;
       }
-
       data.push(newValues); // add newValues to existing data storage
       return {
         data: data.slice(pointsToStore), // slice data storage
