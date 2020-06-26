@@ -44,7 +44,7 @@ export class Chart extends React.Component {
     var threshold = 0;
     if (this.props.samples) {
       if (this.props.sensorId === "me1_exhausttemp1") {
-        threshold = 8;
+        threshold = 6.5;
       }
       if (this.props.sensorId === "me1_exhausttemp2") {
         threshold = 15;
