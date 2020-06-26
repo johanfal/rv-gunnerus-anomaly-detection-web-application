@@ -31,7 +31,7 @@ export const Upload = (props) => {
     is tailored towards the specific id.
   */
   const str_format = props.format.replace(",", "/"); // suitable for display
-  const MAX_SIZE = 31457280; // 30 MB
+  const MAX_SIZE = 100; // MB
   // Define hooks:
   const [uploaded, setUploaded] = useState(false);
   const [filename, setFilename] = useState(null);
@@ -60,9 +60,7 @@ export const Upload = (props) => {
         // error: file size
         alert(
           `You have attempted to upload a file that exceeds the maximum` +
-            ` allowed file size of ${parseInt(
-              MAX_SIZE * 0.00000095367432
-            )} MB.`
+            ` allowed file size of ${parseInt(MAX_SIZE)} MB.`
         );
       } else {
         // error: uploaded format not coinciding with specified format
@@ -238,7 +236,7 @@ export const Upload = (props) => {
     accept: props.format,
     onDrop,
     minSize: 0,
-    maxSize: MAX_SIZE,
+    maxSize: parseInt(MAX_SIZE / 0.00000095367432),
   });
 
   // useMemo for handling drag activities:
