@@ -33,9 +33,9 @@ else:
     app.secret_key = "ADD VALID SECRET KEY HERE"
     app.config['SQLALCHEMY_DATABASE_URI'] = "ADD DATABASE URL HERE"
 
-# Directories for uploaded files and sample files:
+# Directories for uploaded files and example files:
 UPLOADS_DIR = os.path.join(app.instance_path, 'uploads')
-SAMPLES_DIR = os.path.join(app.instance_path, 'samples')
+EXAMPLES_DIR = os.path.join(app.instance_path, 'examples')
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # Prevent unnecessary console warning:
@@ -126,15 +126,15 @@ def stop_thread():
     return {'thread_stopped': False}
 
 
-@app.route('/keras_model/<use_sample>', methods=['GET', 'POST'])
-def save_uploaded_model(use_sample):
-    """Receives uploaded Keras model file from frontend client. If use_sample
-    is true, the sample model, uploaded locally, is used instead."""
+@app.route('/keras_model/<use_example>', methods=['GET', 'POST'])
+def save_uploaded_model(use_example):
+    """Receives uploaded Keras model file from frontend client. If use_example
+    is true, the example model, uploaded locally, is used instead."""
     # Delete model path if already defined in flask storage session:
     storage.pop('keras_model_path', None)
-    if use_sample == 'true':  # load sample model
+    if use_example == 'true':  # load example model
         storage['keras_model_path'] = os.path.join(
-            SAMPLES_DIR, 'sample_model.h5')
+            EXAMPLES_DIR, 'example_model.h5')
         keras_model = load_model(storage['keras_model_path'])
     else:  # load uploaded model based on filename request from client
         file = request.files['file']  # request from client
@@ -163,16 +163,16 @@ def save_uploaded_model(use_sample):
     return {'fileprops': storage['model_properties']}
 
 
-@app.route('/scaler/<use_sample>', methods=['GET', 'POST'])
-def save_uploaded_scaler(use_sample):
+@app.route('/scaler/<use_example>', methods=['GET', 'POST'])
+def save_uploaded_scaler(use_example):
     """Receives uploaded sklearn scaler file from frontend client. If
-    use_sample is true, the sample scaler, uploaded locally, is used
+    use_example is true, the example scaler, uploaded locally, is used
     instead."""
     # Delete scaler path if already defined in flask storage session:
     storage.pop('scaler_path', None)
-    if use_sample == 'true':  # load sample scaler
+    if use_example == 'true':  # load example scaler
         storage['scaler_path'] = os.path.join(
-            SAMPLES_DIR, secure_filename('sample_scaler.pckl'))
+            EXAMPLES_DIR, secure_filename('example_scaler.pckl'))
         with open(storage['scaler_path'], 'rb') as f:
             scaler = pickle.load(f)[0]  # retrieve scaler from pickle object
             # Set scaler properties:
