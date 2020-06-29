@@ -20,13 +20,13 @@ export class ChartDashboard extends React.Component {
     this.inputs = this.props.inputs;
     this.outputs = this.props.outputs;
     this.timesteps = this.props.modelTimesteps;
-    this.sampleFiles = this.props.sampleFiles;
+    this.exampleFiles = this.props.exampleFiles;
   }
 
   // If component is succesfully mounted
   componentDidMount() {
-    fetch(`keras_model/${this.sampleFiles}`); // fetch model from server API
-    fetch(`scaler/${this.sampleFiles}`); // fetch scaler from server API
+    fetch(`keras_model/${this.exampleFiles}`); // fetch model from server API
+    fetch(`scaler/${this.exampleFiles}`); // fetch scaler from server API
     // Convert inputs and outputs to strings for easier parsing to API server:
     const strInputs = this.inputs.join(",");
     const strOutputs = this.outputs.join(",");
@@ -135,13 +135,13 @@ export class ChartDashboard extends React.Component {
     }
   }
 
-  addChart = (sensor, key, pred, samples, connected, values) => {
+  addChart = (sensor, key, pred, examples, connected, values) => {
     /*
       Returns a Chart component based on defined properties:
         - sensor: name of the current sensor
         - key: unique identifier
         - pred: boolean, true if the signal is part of predicted outputs
-        - samples: boolean, true if sample files are used
+        - examples: boolean, true if example files are used
         - connected: boolean, true if signal is connected and receiving values
         - values: latest id, timestep, reading, and pred (if applicable)
     */
@@ -150,7 +150,7 @@ export class ChartDashboard extends React.Component {
         sensorId={sensor}
         key={key}
         pred={pred}
-        samples={samples}
+        examples={examples}
         connected={connected}
         values={values}
       />
@@ -177,7 +177,7 @@ export class ChartDashboard extends React.Component {
         sig,
         sig,
         isSignalToPredict,
-        this.sampleFiles,
+        this.exampleFiles,
         connected,
         values
       );
@@ -244,7 +244,7 @@ export class ChartDashboard extends React.Component {
         sig,
         sig,
         isSignalToPredict,
-        this.sampleFiles,
+        this.exampleFiles,
         connected,
         {
           id: id,

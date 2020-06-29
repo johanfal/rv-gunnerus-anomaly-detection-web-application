@@ -40,9 +40,9 @@ export class Chart extends React.Component {
         }
       );
     }
-    // Set threshold values for samples (predetermined based on experience):
+    // Set threshold values for examples (predetermined based on experience):
     var threshold = 0;
-    if (this.props.samples) {
+    if (this.props.examples) {
       if (this.props.sensorId === "me1_exhausttemp1") {
         threshold = 6.5;
       }

@@ -25,7 +25,7 @@ export class Startpage extends React.Component {
       selectedSystem: [],
       selectedInputs: [],
       selectedOutputs: [],
-      useSampleFiles: false,
+      useExampleFiles: false,
       settingsComplete: false, // determines display
       modelFilename: null,
       scalerFilename: null,
@@ -78,16 +78,16 @@ export class Startpage extends React.Component {
     this.setState({ modelProperties: modelProps });
   };
 
-  setSampleBool = () => {
+  setExampleBool = () => {
     /*
-    Executes when the user clicks to use sample files. the function only sets
-    new states if the useSampleFiles variable was previously false.
+    Executes when the user clicks to use example files. the function only sets
+    new states if the useExampleFiles variable was previously false.
     */
-    if (!this.state.useSampleFiles) {
+    if (!this.state.useExampleFiles) {
       this.setState({
-        useSampleFiles: true,
-        modelFilename: "sample_model.h5",
-        scalerFilename: "sample_scaler.pckl",
+        useExampleFiles: true,
+        modelFilename: "example_model.h5",
+        scalerFilename: "example_scaler.pckl",
       });
     }
   };
@@ -102,7 +102,7 @@ export class Startpage extends React.Component {
         selectedSystem: [],
         selectedInputs: [],
         selectedOutputs: [],
-        useSampleFiles: false,
+        useExampleFiles: false,
         modelFilename: null,
         modelProperties: {
           input: null,
@@ -117,7 +117,7 @@ export class Startpage extends React.Component {
         selectedSystem: [],
         selectedInputs: [],
         selectedOutputs: [],
-        useSampleFiles: false,
+        useExampleFiles: false,
         scalerFilename: null,
       });
     }
@@ -153,7 +153,7 @@ export class Startpage extends React.Component {
 
   render() {
     const settingsComplete = this.state.settingsComplete;
-    const useSampleFiles = this.state.useSampleFiles;
+    const useExampleFiles = this.state.useExampleFiles;
     const modelProperties = this.state.modelProperties;
     const selectedSystem = this.state.selectedSystem[0];
     const selectedInputs = this.state.selectedInputs;
@@ -185,7 +185,7 @@ export class Startpage extends React.Component {
                   sendFilename={(filename, id) =>
                     this.onFileUploaded(filename, id)
                   }
-                  useSampleFiles={useSampleFiles}
+                  useExampleFiles={useExampleFiles}
                   resetProps={(id) => this.resetUploadStates(id)}
                   sendModelProperties={(modelProps) =>
                     this.onModelProperties(modelProps)
@@ -199,7 +199,7 @@ export class Startpage extends React.Component {
                   sendFilename={(filename, id) =>
                     this.onFileUploaded(filename, id)
                   }
-                  useSampleFiles={useSampleFiles}
+                  useExampleFiles={useExampleFiles}
                   resetProps={(id) => this.resetUploadStates(id)}
                 />
               </div>
@@ -207,10 +207,10 @@ export class Startpage extends React.Component {
                 <p style={{ textAlign: "center", color: "white" }}>
                   Or use&nbsp;
                   <a
-                    className="sample-link"
-                    onClick={() => this.setSampleBool()}
+                    className="example-link"
+                    onClick={() => this.setExampleBool()}
                   >
-                    sample model and scaler
+                    example model and scaler
                   </a>
                 </p>
               </div>
@@ -231,7 +231,7 @@ export class Startpage extends React.Component {
                     sendOutputsUpdate={(selectedOutputs) =>
                       this.onOutputsUpdate(selectedOutputs)
                     }
-                    useSampleFiles={useSampleFiles}
+                    useExampleFiles={useExampleFiles}
                   />
                 ) : null}
               </div>
@@ -242,7 +242,7 @@ export class Startpage extends React.Component {
             system={selectedSystem}
             inputs={selectedInputs}
             outputs={selectedOutputs}
-            sampleFiles={useSampleFiles}
+            exampleFiles={useExampleFiles}
             modelFilename={modelFilename}
             modelTimesteps={modelTimesteps}
             scalerFilename={scalerFilename}

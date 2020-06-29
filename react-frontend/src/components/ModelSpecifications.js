@@ -5,8 +5,8 @@ import MultiSelect from "@khanacademy/react-multi-select";
 export class ModelSpecifications extends React.Component {
   constructor(props) {
     super(props);
-    if (props.useSampleFiles) {
-      // Set selected to Nogva Engines if sample files are used:
+    if (props.useExampleFiles) {
+      // Set selected to Nogva Engines if example files are used:
       this.state = {
         options: [],
         selected: ["Nogva Engines"],
@@ -116,15 +116,15 @@ export class ModelSpecifications extends React.Component {
       this.state.selectedOutputs.length === this.props.outputSignals;
     const hasLoaded = options.length > 0;
     const allowContinue = reachedOutputMax && reachedInputMax && hasLoaded;
-    const useSampleFiles = this.props.useSampleFiles;
+    const useExampleFiles = this.props.useExampleFiles;
     const inputSignals = this.props.inputSignals;
     const outputSignals = this.props.outputSignals;
     return (
       <div className="system-selector-container">
         <div className="mod-selector-container">
           <div className="mod-spec-text">
-            {useSampleFiles
-              ? "System on R/V Gunnerus used in sample model:"
+            {useExampleFiles
+              ? "System on R/V Gunnerus used in example model:"
               : "Select system on R/V Gunnerus from database:"}
           </div>
           <MultiSelect
@@ -152,7 +152,7 @@ export class ModelSpecifications extends React.Component {
               type="input"
               maxSelect={inputSignals}
               sendUpdate={(selected) => this.onSelectedInput(selected)}
-              useSampleFiles={useSampleFiles}
+              useExampleFiles={useExampleFiles}
             />
           ) : null}
           {reachedSystemMax ? (
@@ -161,7 +161,7 @@ export class ModelSpecifications extends React.Component {
               type="output"
               maxSelect={outputSignals}
               sendUpdate={(selected) => this.onSelectedOutput(selected)}
-              useSampleFiles={useSampleFiles}
+              useExampleFiles={useExampleFiles}
             />
           ) : null}
           <div className="continue-with-IO">
@@ -196,8 +196,8 @@ class SignalSpecifications extends React.Component {
   */
   constructor(props) {
     super(props);
-    if (props.useSampleFiles) {
-      // Set selected to sample inputs if sample files are used:
+    if (props.useExampleFiles) {
+      // Set selected to example inputs if example files are used:
       if (props.type === "input") {
         this.state = {
           options: [],
@@ -217,7 +217,7 @@ class SignalSpecifications extends React.Component {
           ],
         };
       }
-      // Set selected to sample outputs if sample files are used:
+      // Set selected to example outputs if example files are used:
       if (props.type === "output") {
         this.state = {
           options: [],
@@ -251,8 +251,8 @@ class SignalSpecifications extends React.Component {
         this.setState({
           options: options,
         });
-        if (this.props.useSampleFiles) {
-          // If use sample files, send selection update to Startpage parent:
+        if (this.props.useExampleFiles) {
+          // If use example files, send selection update to Startpage parent:
           this.props.sendUpdate(this.state.selected);
         }
       })
@@ -269,8 +269,8 @@ class SignalSpecifications extends React.Component {
     const maxSelect = this.props.maxSelect;
     const type = this.props.type;
     const signalMax = Math.max(this.SIGNAL_MAX, maxSelect);
-    if (this.props.useSampleFiles) {
-      alert(`The ${type} signals area already set for the sample model.`);
+    if (this.props.useExampleFiles) {
+      alert(`The ${type} signals area already set for the example model.`);
     } else {
       if (selected.length > maxSelect) {
         alert(
@@ -297,12 +297,12 @@ class SignalSpecifications extends React.Component {
     const typeStrTitle = typeStr.charAt(0).toUpperCase() + typeStr.slice(1);
     const hasLoaded = options.length > 0;
     const system = this.props.system;
-    const useSampleFiles = this.props.useSampleFiles;
+    const useExampleFiles = this.props.useExampleFiles;
     return (
       <div className="mod-selector-container">
         <div className="mod-spec-text">
-          {useSampleFiles
-            ? `${typeStrTitle} signals used in sample model ` +
+          {useExampleFiles
+            ? `${typeStrTitle} signals used in example model ` +
               `(${selected.length} in total):`
             : `Select the ${typeStr} signals used by your ML model (` +
               `${selected.length} of ${maxSelect} selected):`}
@@ -321,7 +321,7 @@ class SignalSpecifications extends React.Component {
               maxSelect > 1 ? `All ${type} signals selected` : selected
             }`,
           }}
-          hasSelectAll={maxSelect > 1 && !useSampleFiles ? true : false}
+          hasSelectAll={maxSelect > 1 && !useExampleFiles ? true : false}
           disableSearch={false}
           isLoading={hasLoaded ? false : true}
         />

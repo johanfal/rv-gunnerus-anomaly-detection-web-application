@@ -192,16 +192,16 @@ export const Upload = (props) => {
   // On component update (effect hook)
   useEffect(() => {
     /*
-      Handle use of sample files based on the useSampleFiles property from
+      Handle use of example files based on the useExampleFiles property from
       Startpage parent component. Since predetermined files will not cause a
       call to the onDrop() function, the effect hook is necessary to retrieve
-      properties through an API call and display the sample file properties to
-      the user.
+      properties through an API call and display the example file properties
+      to the user.
     */
-    if (props.useSampleFiles) {
+    if (props.useExampleFiles) {
       setUploaded(true);
       if (props.id === "keras-model") {
-        setFilename("sample_model.h5");
+        setFilename("example_model.h5");
         fetch(`keras_model/${true}`).then((response) => {
           response.json().then((data) => {
             const modelProperties = {
@@ -216,7 +216,7 @@ export const Upload = (props) => {
         });
       }
       if (props.id === "scaler") {
-        setFilename("sample_scaler.pckl");
+        setFilename("example_scaler.pckl");
         fetch(`scaler/${true}`).then((response) => {
           response.json().then((data) => {
             setFileProperties({
@@ -229,7 +229,7 @@ export const Upload = (props) => {
         });
       }
     }
-  }, [props.useSampleFiles]); // only run if prop has been changed in parent
+  }, [props.useExampleFiles]); // only run if prop has been changed in parent
 
   // Call to useDropzone component:
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
